@@ -241,8 +241,38 @@
     rows: 'Rows only: every row rises to the right.',
     column: 'Columns only: every column rises to the bottom.',
     both: 'Rows and columns: numbers rise to the right and towards the bottom.',
-    sudoku: 'Sudoku: rows, columns and diagonals all rise towards the bottom-right.',
+    sudoku: 'Sudoku: rows, columns and both corner-to-corner diagonals rise towards the bottom.',
   };
+
+  // Sudoku needs a square board, otherwise there is no corner-to-corner diagonal.
+  function updateModeHelp() {
+    const dims = PV.BOARD_SIZES[checkedValue('size')] || PV.BOARD_SIZES.standard;
+    const square = dims.rows === dims.cols;
+    const sudokuRadio = document.querySelector('input[name="mode"][value="sudoku"]');
+    if (sudokuRadio) {
+      sudokuRadio.disabled = !square;
+      if (!square && sudokuRadio.checked) {
+        const both = document.querySelector('input[name="mode"][value="both"]');
+        if (both) both.checked = true;
+      }
+    }
+    const help = $('mode-help');
+    if (help) {
+      help.textContent = square
+        ? 'Whole grid: one snake path climbs from the bottom-left. Rows and columns: rise to the right and downwards. Sudoku: rows, columns and both corner-to-corner diagonals.'
+        : 'Whole grid: one snake path climbs from the bottom-left. Rows and columns: rise to the right and downwards. Sudoku needs a square board, so it is unavailable on ' + dims.rows + '\u00d7' + dims.cols + '.';
+    }
+  }
+
+  function updateHostModeOptions() {
+    const dims = PV.BOARD_SIZES[$('host-size').value] || PV.BOARD_SIZES.standard;
+    const square = dims.rows === dims.cols;
+    const select = $('host-mode');
+    Array.prototype.forEach.call(select.options, function (option) {
+      option.disabled = (option.value === 'sudoku') && !square;
+    });
+    if (select.value === 'sudoku' && !square) select.value = 'whole';
+  }
 
   function renderCaption(state) {
     $('mode-caption').textContent = MODE_CAPTIONS[state.mode] || '';
@@ -465,7 +495,7 @@
       '<li><strong>Whole grid:</strong> the board is one snake path that climbs from the bottom-left corner &mdash; numbers must rise along that path.</li>' +
       '<li><strong>Rows only / Columns only:</strong> only those lines are constrained &mdash; rows rise left to right, columns rise top to bottom.</li>' +
       '<li><strong>Rows and columns:</strong> every row rises left to right and every column rises top to bottom.</li>' +
-      '<li><strong>Sudoku:</strong> every row, every column and both diagonal families must rise towards the bottom of the board.</li>' +
+      '<li><strong>Sudoku:</strong> every row, every column and both corner-to-corner diagonals must rise towards the bottom of the board. Needs a square board.</li>' +
       '<li>Roll <kbd>00</kbd> and your turn is skipped. No reroll.</li>' +
       '<li>If the number you roll has <strong>nowhere legal</strong> to go, you lose the round.</li>' +
       '<li>Fill the last empty square and you win the round.</li>' +
@@ -708,6 +738,13 @@
         $('difficulty-help').textContent = DIFFICULTY_HELP[checkedValue('difficulty')];
       });
     });
+
+    document.querySelectorAll('input[name="size"]').forEach(function (el) {
+      el.addEventListener('change', updateModeHelp);
+    });
+    $('host-size').addEventListener('change', updateHostModeOptions);
+    updateModeHelp();
+    updateHostModeOptions();
 
     $('setup-form').addEventListener('submit', function (e) {
       e.preventDefault();

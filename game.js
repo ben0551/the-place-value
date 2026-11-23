@@ -187,29 +187,25 @@
     }
     if (state.mode === MODE_BOTH || state.mode === MODE_SUDOKU) {
       let bounds = mergeBounds(rowBounds(state, r, c), columnBounds(state, r, c));
-      if (state.mode === MODE_SUDOKU) {
-        // Both diagonal families rise towards the bottom of the board. The
-        // north-west family is already implied by rows + columns; the north-east
-        // one (rising down-left) is the extra constraint.
-        const diagonals = [
-          [-1, -1], [1, 1], [-1, 1], [1, -1]
-        ];
-        for (let d = 0; d < diagonals.length; d++) {
-          const dr = diagonals[d][0];
-          const dc = diagonals[d][1];
+      // Sudoku adds only the two corner-to-corner diagonals, and only on a board
+      // that actually has them (rows === cols). Both rise towards the bottom.
+      if (state.mode === MODE_SUDOKU && state.rows === state.cols) {
+        const n = state.rows;
+        const walk = function (dr, dc) {
           for (let k = 1; ; k++) {
             const rr = r + dr * k;
             const cc = c + dc * k;
-            if (rr < 0 || rr >= state.rows || cc < 0 || cc >= state.cols) break;
+            if (rr < 0 || rr >= n || cc < 0 || cc >= n) break;
             const cell = state.board[rr][cc];
             if (cell) {
-              // walking up the board we are getting smaller -> lower bound
               if (dr < 0) bounds = mergeBounds(bounds, { lo: cell.value, hi: Infinity });
               else bounds = mergeBounds(bounds, { lo: -Infinity, hi: cell.value });
               break;
             }
           }
-        }
+        };
+        if (r === c) { walk(-1, -1); walk(1, 1); }         // top-left -> bottom-right
+        if (r + c === n - 1) { walk(-1, 1); walk(1, -1); }  // top-right -> bottom-left
       }
       return bounds;
     }

@@ -31,14 +31,14 @@ First to **3 round wins** takes the match (configurable).
 | **Rows only** | Columns are ignored. Every row rises left → right. |
 | **Columns only** | Rows are ignored. Every column rises top → bottom. |
 | **Rows and columns** | Every row increases left → right and every column increases top → bottom — the board climbs from the top-left corner to the bottom-right. |
-| **Sudoku** | Rows, columns *and* both diagonal families all rise towards the bottom of the board. |
+| **Sudoku** | Rows, columns *and* the two corner-to-corner diagonals all rise towards the bottom of the board. Needs a square board, so it is only offered at 5×5. |
 
 Board sizes: **Easy 3×5**, **Standard 4×5**, **Hard 5×5**.
 
-Measured round length with random play (Standard board): **whole grid ≈ 4
-placements per round**, sudoku ≈ 7, rows and columns ≈ 8, rows only ≈ 12,
-columns only ≈ 13. Whole grid is the tight, swingy mode — a high number played
-early starves every square after it.
+Measured round length with random play: on a Standard 4×5 board, **whole grid ≈
+4 placements per round**, rows and columns ≈ 8, rows only ≈ 12, columns only ≈ 13;
+on the square 5×5 board, sudoku ≈ 9.6 versus rows and columns ≈ 10. Whole grid is
+the tight, swingy mode — a high number played early starves every square after it.
 
 On a wide screen the dice sit beside the board; the game log is collapsed under
 it and expands on click. Below ~720px the dice move underneath and everything
@@ -108,11 +108,11 @@ possible.
    numbers at the top. The example is the intent: the board climbs from the
    top-left to the bottom-right, and every other mode uses that same direction
    (rows rise right, columns rise down).
-4. **Sudoku diagonals.** "Every row, column and diagonal" is taken literally:
-   both diagonal families, not just the two longest. Each rises towards the bottom
-   of the board, matching the rows-and-columns direction. The north-west family
-   adds nothing beyond rows + columns (transitivity); the north-east one, rising
-   down-left, is the real extra constraint.
+4. **Sudoku diagonals.** Only the two corner-to-corner diagonals count, not every
+   diagonal on the board, and each rises towards the bottom of the board. That
+   requires a square grid, so sudoku is greyed out unless rows = cols — with the
+   current sizes that means the Hard 5×5 board only. (A previous reading added
+   every diagonal of both families; measured, that cost ~1 placement per round.)
 
 ## Online multiplayer
 

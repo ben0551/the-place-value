@@ -292,18 +292,23 @@ test('whole grid: filling the last open square wins the round', () => {
 
 /* ----------------------------------------------------------- sudoku mode */
 
-test('sudoku mode: both diagonal families are ordered', () => {
-  const s = PV.createGame({ size: 'easy', mode: 'sudoku', rng: mulberry32(60) });
-  fill(s, 0, 4, 90);
-  assert.strictEqual(PV.isLegal(s, 1, 3, 95), true, 'down-left continues upward');
-  assert.strictEqual(PV.isLegal(s, 1, 3, 80), false, 'must beat the up-right neighbour');
-  assert.strictEqual(PV.isLegal(s, 1, 4, 95), true, 'below must be higher');
-  assert.strictEqual(PV.isLegal(s, 1, 4, 80), false);
+test('sudoku mode: only the two corner-to-corner diagonals are ordered', () => {
+  const s = PV.createGame({ size: 'hard', mode: 'sudoku', rng: mulberry32(60) }); // 5x5
+  fill(s, 0, 0, 10); // top-left corner, on the main diagonal
+  assert.strictEqual(PV.isLegal(s, 1, 1, 20), true, 'down-right along that diagonal');
+  assert.strictEqual(PV.isLegal(s, 1, 1, 5), false, 'must beat the corner');
 
-  const t = PV.createGame({ size: 'easy', mode: 'sudoku', rng: mulberry32(61) });
-  fill(t, 0, 0, 10);
-  assert.strictEqual(PV.isLegal(t, 1, 1, 20), true, 'down-right continues upward');
-  assert.strictEqual(PV.isLegal(t, 1, 1, 5), false);
+  const t = PV.createGame({ size: 'hard', mode: 'sudoku', rng: mulberry32(61) });
+  fill(t, 0, 4, 90); // top-right corner, on the other main diagonal
+  assert.strictEqual(PV.isLegal(t, 1, 3, 95), true, 'down-left along that diagonal');
+  assert.strictEqual(PV.isLegal(t, 1, 3, 80), false, 'must beat the corner');
+  assert.strictEqual(PV.isLegal(t, 1, 1, 5), true, 'off both diagonals, so unconstrained by them');
+});
+
+test('sudoku mode has no diagonals when the board is not square', () => {
+  const s = PV.createGame({ size: 'standard', mode: 'sudoku', rng: mulberry32(62) }); // 4x5
+  fill(s, 0, 0, 10);
+  assert.strictEqual(PV.isLegal(s, 1, 1, 5), true, 'no corner-to-corner diagonal exists here');
 });
 
 /* ------------------------------------------------------------ round endings */
