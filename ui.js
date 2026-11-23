@@ -190,7 +190,9 @@
       let cls = 'cell';
       let text = '';
       if (cell) {
-        cls += ' filled p' + cell.player;
+        if (cell.seed === 'start') cls += ' filled seed seed-start';
+        else if (cell.seed === 'end') cls += ' filled seed seed-end';
+        else cls += ' filled p' + cell.player;
         text = PV.formatNumber(cell.value);
         if (App.lastPlaced && App.lastPlaced.r === r && App.lastPlaced.c === c) cls += ' last-placed';
       } else if (highlight !== null) {
@@ -205,7 +207,10 @@
         el.textContent = text;
       }
       el.setAttribute('aria-label',
-        text ? ('Row ' + (r + 1) + ' column ' + (c + 1) + ': ' + text + ' by ' + playerLabel(cell.player))
+        text ? ('Row ' + (r + 1) + ' column ' + (c + 1) + ': ' + text + ' by '
+               + (cell.seed === 'start' ? 'the start of the snake'
+                  : cell.seed === 'end' ? 'the end of the snake'
+                  : playerLabel(cell.player)))
              : ('Row ' + (r + 1) + ' column ' + (c + 1) + ': empty'));
     }
   }
@@ -232,7 +237,7 @@
   }
 
   const MODE_CAPTIONS = {
-    whole: 'Whole grid: follow the arrows. The snake starts at the bottom-left and finishes on the top row.',
+    whole: 'Whole grid: follow the arrows from 00 up to 100 — the snake starts at the bottom-left.',
     rows: 'Rows only: every row rises to the right.',
     column: 'Columns only: every column rises to the bottom.',
     both: 'Rows and columns: numbers rise to the right and towards the bottom.',

@@ -438,6 +438,15 @@ input[type="text"]:focus, select:focus {
 .cell.filled.p0 { background: var(--p1-soft); border-color: #b9cffb; color: #173a86; }
 .cell.filled.p1 { background: var(--p2-soft); border-color: #f6d9a0; color: #7a4304; }
 
+/* Pinned anchors at each end of the whole-grid snake. */
+.cell.seed {
+  background: linear-gradient(140deg, #f0ecfd, #e4dffa);
+  border-color: #c6b8ef;
+  color: var(--brand);
+}
+
+.cell.seed .path-arrow { color: #8b7bd8; }
+
 .cell.legal {
   cursor: pointer;
   background: var(--legal-soft);

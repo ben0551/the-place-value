@@ -31,7 +31,7 @@ function playMatch(rng, opts, difficultyA, difficultyB) {
   let fullBoards = 0;
   while (state.phase !== 'matchover' && guard++ < 20000) {
     if (state.phase === 'roundover') {
-      if (state.placements >= state.rows * state.cols) fullBoards++;
+      if (state.placements >= PV.placeableCount(state)) fullBoards++;
       PV.nextRound(state);
       continue;
     }

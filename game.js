@@ -57,6 +57,12 @@
     return state._path;
   }
 
+  // Squares that can still take a number. Whole-grid mode pins a 0 at the head
+  // of the snake and a 100 at its tail, so those two are never playable.
+  function placeableCount(state) {
+    return state.rows * state.cols - (state.mode === MODE_WHOLE ? 2 : 0);
+  }
+
   function emptyBoard(rows, cols) {
     const board = [];
     for (let r = 0; r < rows; r++) {
@@ -90,6 +96,14 @@
       log: [],
       rng: opts.rng || Math.random,
     };
+    // Anchor the whole-grid snake: 00 at its head, 100 at its tail.
+    if (state.mode === MODE_WHOLE) {
+      const path = pathFor(state);
+      const head = path[0];
+      const tail = path[path.length - 1];
+      state.board[head.r][head.c] = { value: 0, player: null, seed: 'start' };
+      state.board[tail.r][tail.c] = { value: 100, player: null, seed: 'end' };
+    }
     return state;
   }
 
@@ -234,7 +248,7 @@
     pushLog(state, state.names[state.current] + ' placed ' + formatNumber(value)
       + ' at row ' + (r + 1) + ', column ' + (c + 1) + '.');
     state.roll = null;
-    if (state.placements === state.rows * state.cols) {
+    if (state.placements === placeableCount(state)) {
       endRound(state, state.current, 'board completely filled');
       return { ok: true, full: true };
     }
@@ -328,7 +342,7 @@
       names: state.names.slice(),
       board: state.board.map(function (row) {
         return row.map(function (cell) {
-          return cell ? { value: cell.value, player: cell.player } : null;
+          return cell ? { value: cell.value, player: cell.player, seed: cell.seed || undefined } : null;
         });
       }),
       current: state.current,
@@ -373,7 +387,7 @@
       const row = new Array(state.cols);
       for (let c = 0; c < state.cols; c++) {
         const cell = state.board[r][c];
-        row[c] = cell ? { value: cell.value, player: cell.player } : null;
+        row[c] = cell ? { value: cell.value, player: cell.player, seed: cell.seed || undefined } : null;
       }
       board[r] = row;
     }
@@ -407,6 +421,7 @@
     BOARD_SIZES: BOARD_SIZES,
     formatNumber: formatNumber,
     pathFor: pathFor,
+    placeableCount: placeableCount,
     createGame: createGame,
     roll: roll,
     cellInterval: cellInterval,

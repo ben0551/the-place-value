@@ -27,7 +27,7 @@ First to **3 round wins** takes the match (configurable).
 
 | Mode | Rule |
 |---|---|
-| **Whole grid** (default) | The board is one snake path, numbered like snakes-and-ladders — square 1 is the bottom-left corner, then the path climbs, reversing direction each row. Numbers must strictly rise along the path, so the last square holds the biggest number on the board. |
+| **Whole grid** (default) | The board is one snake path, numbered like snakes-and-ladders — the head at the bottom-left corner is pinned to **00**, the path climbs from there reversing direction each row, and the tail is pinned to **100**. Numbers must strictly rise between the two anchors. |
 | **Rows only** | Columns are ignored. Every row rises left → right. |
 | **Columns only** | Rows are ignored. Every column rises top → bottom. |
 | **Rows and columns** | Every row increases left → right and every column increases top → bottom — the board climbs from the top-left corner to the bottom-right. |

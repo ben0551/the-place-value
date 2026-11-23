@@ -227,9 +227,30 @@ test('whole grid: the snake path starts at the bottom-left and climbs', () => {
   assert.strictEqual(path[path.length - 1].r, 0, 'the largest numbers sit on the top row');
 });
 
-test('whole grid: a 97 in the first square leaves only 98 or 99', () => {
+test('whole grid pins 00 at the head and 100 at the tail', () => {
+  [['easy', 3], ['standard', 4], ['hard', 5]].forEach(function (pair, i) {
+    const s = PV.createGame({ size: pair[0], mode: 'whole', rng: mulberry32(70 + i) });
+    const path = PV.pathFor(s);
+    const head = s.board[path[0].r][path[0].c];
+    const tail = s.board[path[path.length - 1].r][path[path.length - 1].c];
+    assert.strictEqual(head.value, 0);
+    assert.strictEqual(head.seed, 'start');
+    assert.strictEqual(tail.value, 100);
+    assert.strictEqual(tail.seed, 'end');
+    assert.strictEqual(PV.formatNumber(head.value), '00');
+    assert.strictEqual(PV.formatNumber(tail.value), '100');
+    assert.strictEqual(PV.placeableCount(s), pair[1] * 5 - 2);
+    assert.strictEqual(s.board.flat().filter(Boolean).length, 2, 'only the anchors are filled');
+  });
+
+  const plain = PV.createGame({ mode: 'both', rng: mulberry32(71) });
+  assert.strictEqual(plain.board.flat().filter(Boolean).length, 0, 'other modes start empty');
+});
+
+test('whole grid: a 97 early in the path leaves only 98 or 99', () => {
   const s = PV.createGame({ size: 'easy', mode: 'whole', rng: mulberry32(41) });
-  fill(s, 2, 0, 97); // bottom-left = first square of the snake
+  const second = PV.pathFor(s)[1];
+  PV.placeValue(s, second.r, second.c, 97);
   assert.ok(PV.legalCells(s, 98).length > 0, '98 still has somewhere to go');
   assert.ok(PV.legalCells(s, 99).length > 0, '99 still has somewhere to go');
   assert.strictEqual(PV.legalCells(s, 10).length, 0, 'everything after it must be higher');
@@ -249,22 +270,24 @@ test('whole grid: a mid-path number bounds both of its neighbours', () => {
   assert.strictEqual(PV.isLegal(s, after.r, after.c, 40), false);
 });
 
-test('whole grid: filling the last square wins the round', () => {
+test('whole grid: filling the last open square wins the round', () => {
   const s = PV.createGame({ size: 'easy', mode: 'whole', rng: mulberry32(43) });
   const path = PV.pathFor(s);
-  // Lay an increasing run along the path, leaving the final square empty.
-  for (let k = 0; k < path.length - 1; k++) {
-    const v = 10 + k * 2;
-    assert.strictEqual(PV.isLegal(s, path[k].r, path[k].c, v), true, `path square ${k}`);
-    fill(s, path[k].r, path[k].c, v);
+  assert.strictEqual(PV.placeableCount(s), s.rows * s.cols - 2);
+  // Playable squares are the snake minus its two pinned anchors.
+  const playable = path.slice(1, path.length - 1);
+  for (let i = 0; i < playable.length - 1; i++) {
+    const cell = playable[i];
+    const v = 10 + i * 2;
+    assert.strictEqual(PV.isLegal(s, cell.r, cell.c, v), true, `path square ${i}`);
+    const res = PV.placeValue(s, cell.r, cell.c, v);
+    assert.strictEqual(res.ok, true);
   }
-  s.phase = 'place';
-  s.current = 0;
-  s.roll = { tens: 9, ones: 9, value: 99, skipped: false };
-  const lastCell = path[path.length - 1];
-  PV.place(s, lastCell.r, lastCell.c);
+  const last = playable[playable.length - 1];
+  const result = PV.placeValue(s, last.r, last.c, 99);
+  assert.strictEqual(result.full, true);
   assert.strictEqual(s.phase, 'roundover');
-  assert.strictEqual(s.roundWinner, 0);
+  assert.strictEqual(s.scores[s.roundWinner], 1);
 });
 
 /* ----------------------------------------------------------- sudoku mode */
