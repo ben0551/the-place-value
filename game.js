@@ -63,6 +63,17 @@
     return state.rows * state.cols - (state.mode === MODE_WHOLE ? 2 : 0);
   }
 
+  // Anchor the whole-grid snake: 00 at its head, 100 at its tail. Applied on
+  // every new round, not just the first, so rematches keep the preload.
+  function seedAnchors(state) {
+    if (state.mode !== MODE_WHOLE) return;
+    const path = pathFor(state);
+    const head = path[0];
+    const tail = path[path.length - 1];
+    state.board[head.r][head.c] = { value: 0, player: null, seed: 'start' };
+    state.board[tail.r][tail.c] = { value: 100, player: null, seed: 'end' };
+  }
+
   function emptyBoard(rows, cols) {
     const board = [];
     for (let r = 0; r < rows; r++) {
@@ -97,13 +108,7 @@
       rng: opts.rng || Math.random,
     };
     // Anchor the whole-grid snake: 00 at its head, 100 at its tail.
-    if (state.mode === MODE_WHOLE) {
-      const path = pathFor(state);
-      const head = path[0];
-      const tail = path[path.length - 1];
-      state.board[head.r][head.c] = { value: 0, player: null, seed: 'start' };
-      state.board[tail.r][tail.c] = { value: 100, player: null, seed: 'end' };
-    }
+    seedAnchors(state);
     return state;
   }
 
@@ -283,6 +288,7 @@
     if (state.phase !== 'roundover') throw new Error('nextRound() called before the round ended');
     state.round++;
     state.board = emptyBoard(state.rows, state.cols);
+    seedAnchors(state);
     state.current = 0;
     state.phase = 'roll';
     state.roll = null;

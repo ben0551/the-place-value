@@ -311,6 +311,23 @@ test('sudoku mode has no diagonals when the board is not square', () => {
   assert.strictEqual(PV.isLegal(s, 1, 1, 5), true, 'no corner-to-corner diagonal exists here');
 });
 
+test('whole grid: the anchors survive every rematch', () => {
+  const s = PV.createGame({ size: 'standard', mode: 'whole', rng: mulberry32(80) });
+  const path = PV.pathFor(s);
+  fill(s, path[1].r, path[1].c, 40);
+  PV.endRound(s, 0, 'test');
+  PV.nextRound(s);
+  assert.strictEqual(s.round, 2);
+  const head = s.board[path[0].r][path[0].c];
+  const tail = s.board[path[path.length - 1].r][path[path.length - 1].c];
+  assert.strictEqual(head.value, 0, 'head anchor reloaded');
+  assert.strictEqual(head.seed, 'start');
+  assert.strictEqual(tail.value, 100, 'tail anchor reloaded');
+  assert.strictEqual(tail.seed, 'end');
+  assert.strictEqual(s.placements, 0, 'anchors do not count as placements');
+  assert.strictEqual(PV.placeableCount(s), s.rows * s.cols - 2);
+});
+
 /* ------------------------------------------------------------ round endings */
 
 test('a roll with no legal square loses the round for the roller', () => {
