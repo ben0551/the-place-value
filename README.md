@@ -28,16 +28,17 @@ First to **3 round wins** takes the match (configurable).
 | Mode | Rule |
 |---|---|
 | **Whole grid** (default) | The board is one snake path, numbered like snakes-and-ladders — square 1 is the bottom-left corner, then the path climbs, reversing direction each row. Numbers must strictly rise along the path, so the last square holds the biggest number on the board. |
-| **Rows only** | Columns are ignored. Each row must be strictly monotonic; its direction is set by the first two numbers placed in that row, and may differ between rows. |
-| **Columns only** | Rows are ignored. Each column must be strictly monotonic; its direction is set by the first two numbers placed in that column, and may differ between columns. |
+| **Rows only** | Columns are ignored. Every row rises left → right. |
+| **Columns only** | Rows are ignored. Every column rises top → bottom. |
 | **Rows and columns** | Every row increases left → right and every column increases top → bottom — the board climbs from the top-left corner to the bottom-right. |
 | **Sudoku** | Rows, columns *and* both diagonal families all rise towards the bottom of the board. |
 
 Board sizes: **Easy 3×5**, **Standard 4×5**, **Hard 5×5**.
 
 Measured round length with random play (Standard board): **whole grid ≈ 4
-placements per round**, sudoku ≈ 7, rows and columns ≈ 8. Whole grid is the tight,
-swingy mode — a high number played early starves every square after it.
+placements per round**, sudoku ≈ 7, rows and columns ≈ 8, rows only ≈ 12,
+columns only ≈ 13. Whole grid is the tight, swingy mode — a high number played
+early starves every square after it.
 
 On a wide screen the dice sit beside the board; the game log is collapsed under
 it and expands on click. Below ~720px the dice move underneath and everything
@@ -95,11 +96,12 @@ possible.
    is a single boustrophedon path starting at the bottom-left corner, and values
    must strictly increase along it. Because the path is a total order, one early
    high number constrains every square after it.
-2. **Direction in the single-axis modes.** The spec's column-mode example board
-   (`90 12 51` / `80 45 76` / `15 78 99`) contains one *descending* column and
-   two ascending ones, so "columns must stay ordered" cannot mean a single fixed
-   direction. Column mode therefore lets each column pick its own direction once
-   it holds two numbers, and rows-only mode does the same per row.
+2. **Direction in the single-axis modes.** The original reading let each row or
+   column pick its own direction once it held two numbers, with a lone number
+   constraining nothing — measured, those modes filled 13–15 of 20 squares before
+   anyone got stuck, i.e. effectively ruleless. Ben chose fixed directions
+   instead: rows rise left → right, columns rise top → bottom, the same as
+   rows-and-columns.
 3. **Vertical direction of rows-and-columns.** The prose says "higher numbers
    must be above lower numbers", but the worked example board
    (`05 15 28 64 91` / `12 23 44 70 95` / `22 40 61 80 99`) has the *smallest*

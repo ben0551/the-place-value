@@ -457,7 +457,7 @@
       '<li>Players take turns. On your turn you roll two 10-sided dice: a tens die and a ones die.</li>' +
       '<li>The dice make a two-digit number, like <kbd>0</kbd> + <kbd>7</kbd> = <kbd>07</kbd>.</li>' +
       '<li>Place that number in any empty square, as long as the board stays in order.</li>' +
-      '<li><strong>Whole grid:</strong> the board is one snake path that climbs to the top-right corner &mdash; numbers must rise along that path.</li>' +
+      '<li><strong>Whole grid:</strong> the board is one snake path that climbs from the bottom-left corner &mdash; numbers must rise along that path.</li>' +
       '<li><strong>Rows only / Columns only:</strong> only those lines are constrained &mdash; each one just has to stay in a single direction.</li>' +
       '<li><strong>Rows and columns:</strong> every row rises left to right and every column rises top to bottom.</li>' +
       '<li><strong>Sudoku:</strong> every row, every column and both diagonal families must rise towards the bottom of the board.</li>' +
