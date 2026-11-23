@@ -128,46 +128,40 @@
 
   /* ------------------------------------------------------- ordering rules */
 
-  // Column mode: gather the filled cells of this column, top to bottom.
-  function columnInterval(state, r, c) {
-    const filled = [];
-    for (let rr = 0; rr < state.rows; rr++) {
-      if (state.board[rr][c]) filled.push({ r: rr, v: state.board[rr][c].value });
+  // Single-axis modes use a fixed direction, the same one as rows-and-columns:
+  // rows rise to the right, columns rise downwards. A lone number therefore still
+  // constrains its line (everything left of it must be smaller, everything right
+  // of it larger) instead of leaving the direction open.
+
+  function rowBounds(state, r, c) {
+    let lo = -Infinity;
+    let hi = Infinity;
+    for (let cc = c - 1; cc >= 0; cc--) {
+      if (state.board[r][cc]) { lo = Math.max(lo, state.board[r][cc].value); break; }
     }
-    return lineInterval(filled, r);
+    for (let cc = c + 1; cc < state.cols; cc++) {
+      if (state.board[r][cc]) { hi = Math.min(hi, state.board[r][cc].value); break; }
+    }
+    return { lo: lo, hi: hi };
   }
 
-  // Rows-only mode: the same idea applied along a row, left to right.
-  function rowInterval(state, r, c) {
-    const filled = [];
-    for (let cc = 0; cc < state.cols; cc++) {
-      if (state.board[r][cc]) filled.push({ r: cc, v: state.board[r][cc].value });
+  function columnBounds(state, r, c) {
+    let lo = -Infinity;
+    let hi = Infinity;
+    for (let rr = r - 1; rr >= 0; rr--) {
+      if (state.board[rr][c]) { lo = Math.max(lo, state.board[rr][c].value); break; }
     }
-    return lineInterval(filled, c);
+    for (let rr = r + 1; rr < state.rows; rr++) {
+      if (state.board[rr][c]) { hi = Math.min(hi, state.board[rr][c].value); break; }
+    }
+    return { lo: lo, hi: hi };
   }
 
-  // Shared "one line must stay strictly monotonic" rule. `filled` is the line's
-  // occupied positions in order (ascending `r`), `pos` is the empty slot. Once a
-  // line holds two numbers its direction is fixed; a single number leaves it open.
-  function lineInterval(filled, pos) {
-    if (filled.length === 0) return { lo: -Infinity, hi: Infinity };
-    if (filled.length === 1) return { lo: -Infinity, hi: Infinity, avoid: filled[0].v };
-
-    const dir = filled[0].v < filled[1].v ? 'asc' : 'desc';
-    let before = null;
-    let after = null;
-    for (let i = 0; i < filled.length; i++) {
-      if (filled[i].r < pos) before = filled[i];
-      else if (filled[i].r > pos) { after = filled[i]; break; }
-    }
-    if (dir === 'asc') {
-      return { lo: before ? before.v : -Infinity, hi: after ? after.v : Infinity };
-    }
-    return { lo: after ? after.v : -Infinity, hi: before ? before.v : Infinity };
+  function mergeBounds(a, b) {
+    return { lo: Math.max(a.lo, b.lo), hi: Math.min(a.hi, b.hi) };
   }
 
   // Exclusive bounds {lo, hi} for an empty cell: lo < value < hi.
-  // `avoid` is set only by a single-occupant line, where either direction works.
   function cellInterval(state, r, c) {
     if (state.board[r][c]) return null;
     if (state.mode === MODE_WHOLE) {
@@ -187,71 +181,42 @@
       }
       return { lo: lo, hi: hi };
     }
-    if (state.mode === MODE_SUDOKU) {
-      let lo = -Infinity;
-      let hi = Infinity;
-      // rows: rise to the right
-      for (let cc = c - 1; cc >= 0; cc--) {
-        if (state.board[r][cc]) { lo = Math.max(lo, state.board[r][cc].value); break; }
+    if (state.mode === MODE_BOTH || state.mode === MODE_SUDOKU) {
+      let bounds = mergeBounds(rowBounds(state, r, c), columnBounds(state, r, c));
+      if (state.mode === MODE_SUDOKU) {
+        // Both diagonal families rise towards the bottom of the board. The
+        // north-west family is already implied by rows + columns; the north-east
+        // one (rising down-left) is the extra constraint.
+        const diagonals = [
+          [-1, -1], [1, 1], [-1, 1], [1, -1]
+        ];
+        for (let d = 0; d < diagonals.length; d++) {
+          const dr = diagonals[d][0];
+          const dc = diagonals[d][1];
+          for (let k = 1; ; k++) {
+            const rr = r + dr * k;
+            const cc = c + dc * k;
+            if (rr < 0 || rr >= state.rows || cc < 0 || cc >= state.cols) break;
+            const cell = state.board[rr][cc];
+            if (cell) {
+              // walking up the board we are getting smaller -> lower bound
+              if (dr < 0) bounds = mergeBounds(bounds, { lo: cell.value, hi: Infinity });
+              else bounds = mergeBounds(bounds, { lo: -Infinity, hi: cell.value });
+              break;
+            }
+          }
+        }
       }
-      for (let cc = c + 1; cc < state.cols; cc++) {
-        if (state.board[r][cc]) { hi = Math.min(hi, state.board[r][cc].value); break; }
-      }
-      // columns: rise downwards
-      for (let rr = r - 1; rr >= 0; rr--) {
-        if (state.board[rr][c]) { lo = Math.max(lo, state.board[rr][c].value); break; }
-      }
-      for (let rr = r + 1; rr < state.rows; rr++) {
-        if (state.board[rr][c]) { hi = Math.min(hi, state.board[rr][c].value); break; }
-      }
-      // both diagonal families rise towards the bottom of the board. The
-      // north-west diagonals are already implied by rows + columns; the
-      // north-east ones (down-left) are the extra constraint.
-      for (let k = 1; r - k >= 0 && c - k >= 0; k++) {
-        const cell = state.board[r - k][c - k];
-        if (cell) { lo = Math.max(lo, cell.value); break; }
-      }
-      for (let k = 1; r + k < state.rows && c + k < state.cols; k++) {
-        const cell = state.board[r + k][c + k];
-        if (cell) { hi = Math.min(hi, cell.value); break; }
-      }
-      for (let k = 1; r - k >= 0 && c + k < state.cols; k++) {
-        const cell = state.board[r - k][c + k];
-        if (cell) { lo = Math.max(lo, cell.value); break; }
-      }
-      for (let k = 1; r + k < state.rows && c - k >= 0; k++) {
-        const cell = state.board[r + k][c - k];
-        if (cell) { hi = Math.min(hi, cell.value); break; }
-      }
-      return { lo: lo, hi: hi };
+      return bounds;
     }
-    if (state.mode === MODE_BOTH) {
-      let lo = -Infinity;
-      let hi = Infinity;
-      for (let cc = c - 1; cc >= 0; cc--) {
-        if (state.board[r][cc]) { lo = Math.max(lo, state.board[r][cc].value); break; }
-      }
-      for (let cc = c + 1; cc < state.cols; cc++) {
-        if (state.board[r][cc]) { hi = Math.min(hi, state.board[r][cc].value); break; }
-      }
-      for (let rr = r - 1; rr >= 0; rr--) {
-        if (state.board[rr][c]) { lo = Math.max(lo, state.board[rr][c].value); break; }
-      }
-      for (let rr = r + 1; rr < state.rows; rr++) {
-        if (state.board[rr][c]) { hi = Math.min(hi, state.board[rr][c].value); break; }
-      }
-      return { lo: lo, hi: hi };
-    }
-    if (state.mode === MODE_COLUMN) return columnInterval(state, r, c);
-    return rowInterval(state, r, c);
+    if (state.mode === MODE_COLUMN) return columnBounds(state, r, c);
+    return rowBounds(state, r, c);
   }
 
   function isLegal(state, r, c, value) {
     if (state.board[r][c]) return false;
     const iv = cellInterval(state, r, c);
-    if (value <= iv.lo || value >= iv.hi) return false;
-    if (iv.avoid !== undefined && value === iv.avoid) return false;
-    return true;
+    return value > iv.lo && value < iv.hi;
   }
 
   function legalCells(state, value) {
@@ -338,8 +303,7 @@
         const iv = cellInterval(state, r, c);
         const lo = Math.max(iv.lo, 0);
         const hi = Math.min(iv.hi, 100);
-        let width = hi - lo - 1;
-        if (iv.avoid !== undefined && iv.avoid > lo && iv.avoid < hi) width -= 1;
+        const width = hi - lo - 1;
         if (width > 0) count++;
       }
     }
@@ -355,8 +319,7 @@
         const iv = cellInterval(state, r, c);
         const lo = Math.max(iv.lo, 0);
         const hi = Math.min(iv.hi, 100);
-        let width = hi - lo - 1;
-        if (iv.avoid !== undefined && iv.avoid > lo && iv.avoid < hi) width -= 1;
+        const width = hi - lo - 1;
         if (width > 0) total += width;
       }
     }

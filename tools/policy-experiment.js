@@ -42,9 +42,7 @@ function widthOf(state, r, c) {
   const iv = PV.cellInterval(state, r, c);
   const lo = Math.max(iv.lo, 0);
   const hi = Math.min(iv.hi, 100);
-  let w = hi - lo - 1;
-  if (iv.avoid !== undefined && iv.avoid > lo && iv.avoid < hi) w -= 1;
-  return Math.max(0, w);
+  return Math.max(0, hi - lo - 1);
 }
 
 // How many of the 99 placeable values would immediately end the round in our

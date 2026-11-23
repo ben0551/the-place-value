@@ -148,62 +148,61 @@ test('column mode ignores the rows', () => {
   assert.strictEqual(PV.isLegal(s, 0, 2, 5), true);
 });
 
-test('column mode: a column keeps one direction once two values are down', () => {
-  const s = PV.createGame({ mode: 'column', rng: mulberry32(8) });
-  fill(s, 0, 0, 90);
-  fill(s, 1, 0, 80); // descending
+test('column mode: columns always rise towards the bottom', () => {
+  const s = PV.createGame({ size: 'easy', mode: 'column', rng: mulberry32(8) });
+  fill(s, 0, 0, 10);
+  fill(s, 1, 0, 50);
   assert.strictEqual(PV.isLegal(s, 2, 0, 70), true);
-  assert.strictEqual(PV.isLegal(s, 2, 0, 85), false, 'must stay below 80');
-  assert.strictEqual(PV.isLegal(s, 2, 0, 95), false);
+  assert.strictEqual(PV.isLegal(s, 2, 0, 60), true);
+  assert.strictEqual(PV.isLegal(s, 2, 0, 30), false, 'must stay above 50');
+  assert.strictEqual(PV.isLegal(s, 2, 0, 5), false);
+
+  // a lone number already fixes which way the column runs
+  const t = PV.createGame({ size: 'easy', mode: 'column', rng: mulberry32(9) });
+  fill(t, 0, 0, 90);
+  assert.strictEqual(PV.isLegal(t, 1, 0, 80), false, 'nothing may go below it');
+  assert.strictEqual(PV.isLegal(t, 1, 0, 95), true);
 });
 
-test('column mode: a single value leaves the direction open', () => {
-  const s = PV.createGame({ mode: 'column', rng: mulberry32(9) });
-  fill(s, 0, 0, 90);
-  assert.strictEqual(PV.isLegal(s, 1, 0, 10), true);
-  assert.strictEqual(PV.isLegal(s, 1, 0, 95), true);
-  assert.strictEqual(PV.isLegal(s, 1, 0, 90), false, 'duplicates are not ordered');
-});
-
-test('the spec column-mode example board is legal', () => {
+test('a rising column-mode board is legal cell by cell', () => {
   const s = PV.createGame({ mode: 'column', rng: mulberry32(10) });
-  const rows = [
-    [90, 12, 51],
-    [80, 45, 76],
-    [15, 78, 99],
+  const cols = [
+    [10, 20, 30],
+    [12, 45, 78],
+    [15, 51, 99],
   ];
   const order = [];
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) order.push([r, c]);
+  for (let c = 0; c < 3; c++) for (let r = 0; r < 3; r++) order.push([r, c]);
   for (const [r, c] of order) {
-    const v = rows[r][c];
-    assert.strictEqual(PV.isLegal(s, r, c, v), true, `cell ${r},${c} = ${v}`);
-    fill(s, r, c, v);
+    assert.strictEqual(PV.isLegal(s, r, c, cols[c][r]), true, `cell ${r},${c}`);
+    fill(s, r, c, cols[c][r]);
   }
 });
 
 test('rows mode ignores the columns', () => {
   const s = PV.createGame({ mode: 'rows', rng: mulberry32(14) });
-  fill(s, 0, 0, 90);
-  fill(s, 0, 1, 10); // same row, would break a whole-grid row rule
-  assert.strictEqual(PV.isLegal(s, 0, 2, 5), true);
+  fill(s, 0, 0, 10);
+  fill(s, 1, 0, 90); // same column, would break a column rule
+  assert.strictEqual(PV.isLegal(s, 2, 0, 5), true);
 });
 
-test('rows mode: a row keeps one direction once two values are down', () => {
+test('rows mode: rows always rise to the right', () => {
   const s = PV.createGame({ mode: 'rows', rng: mulberry32(15) });
   fill(s, 1, 1, 20);
-  fill(s, 1, 2, 80); // ascending
+  fill(s, 1, 2, 80);
   assert.strictEqual(PV.isLegal(s, 1, 0, 10), true);
-  assert.strictEqual(PV.isLegal(s, 1, 0, 30), false, 'must stay below 20');
-  assert.strictEqual(PV.isLegal(s, 1, 3, 70), false, 'must stay under 80');
+  assert.strictEqual(PV.isLegal(s, 1, 0, 30), false, 'left of 20 must be smaller');
+  assert.strictEqual(PV.isLegal(s, 1, 3, 70), false, 'right of 80 must be larger');
   assert.strictEqual(PV.isLegal(s, 1, 3, 90), true);
 });
 
-test('rows mode: a single value leaves the direction open', () => {
+test('rows mode: a lone number already fixes the direction', () => {
   const s = PV.createGame({ mode: 'rows', rng: mulberry32(16) });
   fill(s, 2, 4, 50);
-  assert.strictEqual(PV.isLegal(s, 2, 3, 10), true);
-  assert.strictEqual(PV.isLegal(s, 2, 3, 90), true);
-  assert.strictEqual(PV.isLegal(s, 2, 3, 50), false, 'duplicates are not ordered');
+  assert.strictEqual(PV.isLegal(s, 2, 3, 10), true, 'left of it must be smaller');
+  assert.strictEqual(PV.isLegal(s, 2, 3, 90), false);
+  assert.strictEqual(PV.isLegal(s, 2, 0, 10), true);
+  assert.strictEqual(PV.isLegal(s, 2, 0, 90), false);
 });
 
 test('unknown modes fall back to rows and columns', () => {
