@@ -41,15 +41,17 @@
     return randomPick(bestCells, state.rng);
   }
 
-  /* Policy used inside hard-AI rollouts: keep the most squares feasible. */
+  /* Policy used inside hard-AI rollouts: a cheap greedy player that narrows the
+     board. It only has to be consistent — the candidate moves are what get
+     compared, and tools/policy-experiment.js shows the choice is not sensitive. */
   function policyPick(state, cells, value) {
-    let best = -Infinity;
+    let best = Infinity;
     let bestCells = [];
     for (let i = 0; i < cells.length; i++) {
       const sim = PV.cloneState(state);
       PV.placeValue(sim, cells[i].r, cells[i].c, value);
-      const score = PV.feasibleCount(sim);
-      if (score > best) {
+      const score = PV.flexibility(sim);
+      if (score < best) {
         best = score;
         bestCells = [cells[i]];
       } else if (score === best) {

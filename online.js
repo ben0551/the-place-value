@@ -185,6 +185,14 @@
       this.settle();
     }
 
+    hostNextRound() {
+      if (this.role !== 'host' || !this.state) return;
+      if (this.state.phase !== 'roundover') return;
+      PV.nextRound(this.state);
+      this.broadcast();
+      this.afterAction();
+    }
+
     guestPlace(r, c) {
       if (this.role !== 'guest' || !this.conn) return;
       if (!this.state || this.state.current !== 1 || this.state.phase !== 'place') return;

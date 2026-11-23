@@ -328,8 +328,9 @@
     );
     if (!online) {
       $('btn-next-round').addEventListener('click', function () {
-        PV.nextRound(App.game);
         hideOverlay();
+        if (App.mode === 'online') { App.session.hostNextRound(); return; }
+        PV.nextRound(App.game);
         afterAction();
       });
     }
@@ -522,11 +523,12 @@
 
   function onOnlineState(state) {
     App.game = state;
+    // A fresh authoritative state invalidates any overlay we were showing.
+    hideOverlay();
     if (!$('screen-game').hidden) {
       afterAction();
     } else {
       hideLobby();
-      hideOverlay();
       showScreen('game');
       afterAction();
     }
