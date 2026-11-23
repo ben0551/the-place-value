@@ -44,25 +44,33 @@ Board sizes: **Easy 3×5**, **Standard 4×5**, **Hard 5×5**.
 | **Medium** | Maximises the board's remaining placement options (leaves gaps open). |
 | **Hard** | Monte-Carlo simulation of the dice: for every legal square it plays out dozens of random continuations and keeps the one with the highest round-win rate. |
 
-### A note on Medium (measured, not guessed)
+### A note on the AI ladder (measured, not guessed)
 
-`tools/sim.js` and `tools/policy-experiment.js` play thousands of AI-vs-AI games.
-In *this* game, hoarding options is a **losing** strategy: the strong line is to
-constrict the board so the opponent is the one who gets stuck.
+`tools/sim.js`, `tools/policy-experiment.js` and `tests/engine.test.js` play
+thousands of AI-vs-AI games. This game is dice-heavy — a round on a Standard
+board lasts about 9 placements — so no AI is dominant and the margins are real
+but modest.
 
-Over 200 simulated standard-grid matches:
+Win rate for the first player, 200 standard-grid matches per row:
 
-| Matchup | Win rate for the first player |
+| Matchup | Win rate |
 |---|---|
-| Hard vs Easy | ~73% |
-| Medium vs Easy | ~48% |
-| Constrict (minimise options) vs Easy | ~60% |
+| Hard vs Easy | 59% |
+| Hard vs Medium | 66% |
+| Hard vs a "constrict the board" heuristic | 82% |
+| Medium vs Easy | 45% |
 
-So Medium plays exactly as specified, but it is deliberately *gentle* — it keeps
-the board open and is beatable. If you want Medium to be a real step up from
-Easy, change one line in `ai.js` (`chooseMedium`) to score with
-`-PV.flexibility(sim)` instead of `PV.flexibility(sim)`. Say the word and it is
-a one-line commit.
+Medium is implemented exactly as specified: it maximises the board's remaining
+placement options. Measured, that is a *weaker* strategy than picking a legal
+square at random. Keeping options open leaves options for the opponent too, and
+in this game the player who gets stuck first loses the round — so the strong
+line is the one Hard plays.
+
+If you want Medium to be a genuine middle rung, replace `chooseMedium` in
+`ai.js` with a shallow Monte-Carlo search (Hard's evaluation with a smaller
+rollout budget). Measured, 16 rollouts gives 59% vs Easy and 64% vs the
+spec's Medium, which makes the ladder monotonic. It is a small commit whenever
+you want it.
 
 Rounds are short: on a Standard board a round lasts about 9 placements, and
 ending a round by filling the board is rare (0 of 78 rounds in one sample) but
