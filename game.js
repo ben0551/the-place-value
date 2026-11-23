@@ -1,17 +1,11 @@
 /* The Place Value — pure game engine. No DOM access, no side effects.
  *
- * Board convention (matches the worked example in the spec):
- *   row 0 is the TOP row, column 0 is the LEFT column.
- *   Whole Grid mode: every row increases left -> right, every column
- *     increases top -> bottom (so the smallest number sits top-left).
- *   Column mode: rows are ignored; each column must be strictly monotonic
- *     (either ascending or descending — the direction is fixed by the first
- *     two values placed in that column).
- *
- * The spec's prose says "higher numbers must be above lower numbers", which is
- * the vertical mirror of the example board it prints. The two are isomorphic
- * (flip the board upside down), so only the display differs. FLIP_VERTICAL
- * below switches the rendered orientation without changing the strategy.
+ * Row 0 is the TOP row, column 0 is the LEFT column. Ordering rule per mode:
+ *   whole   — one snake path over every square, values strictly rising along it
+ *   rows    — each row rises left -> right
+ *   column  — each column rises top -> bottom
+ *   both    — rows rise left -> right AND columns rise top -> bottom
+ *   sudoku  — both of those, plus both diagonal families rising downwards
  */
 (function (root, factory) {
   const api = factory();
@@ -31,10 +25,6 @@
     standard: { rows: 4, cols: 5, label: 'Standard', cells: 20 },
     hard: { rows: 5, cols: 5, label: 'Hard', cells: 25 },
   };
-
-  // Set to true to render columns growing upwards (spec prose) instead of
-  // downwards (spec example). Purely cosmetic — the game tree is identical.
-  const FLIP_VERTICAL = false;
 
   function formatNumber(value) {
     return String(value).padStart(2, '0');
@@ -415,7 +405,6 @@
     MODE_BOTH: MODE_BOTH,
     MODE_SUDOKU: MODE_SUDOKU,
     BOARD_SIZES: BOARD_SIZES,
-    FLIP_VERTICAL: FLIP_VERTICAL,
     formatNumber: formatNumber,
     pathFor: pathFor,
     createGame: createGame,

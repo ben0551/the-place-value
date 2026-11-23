@@ -141,7 +141,6 @@
   function displayRows(state) {
     const rows = [];
     for (let r = 0; r < state.rows; r++) rows.push(r);
-    if (PV.FLIP_VERTICAL) rows.reverse();
     return rows;
   }
 

@@ -104,8 +104,8 @@ possible.
    must be above lower numbers", but the worked example board
    (`05 15 28 64 91` / `12 23 44 70 95` / `22 40 61 80 99`) has the *smallest*
    numbers at the top. The example is the intent: the board climbs from the
-   top-left to the bottom-right. The readings are isomorphic, so only the display
-   differs — set `FLIP_VERTICAL = true` in `game.js` for the prose reading.
+   top-left to the bottom-right, and every other mode uses that same direction
+   (rows rise right, columns rise down).
 4. **Sudoku diagonals.** "Every row, column and diagonal" is taken literally:
    both diagonal families, not just the two longest. Each rises towards the bottom
    of the board, matching the rows-and-columns direction. The north-west family
