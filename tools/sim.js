@@ -60,8 +60,8 @@ function playMatch(rng, opts, difficultyA, difficultyB) {
 function main() {
   const games = Number(process.argv[2] || 20);
   const size = process.argv[3] || 'standard';
-  const modeArg = process.argv[4] || 'grid';
-  const mode = (modeArg === 'rows' || modeArg === 'column') ? modeArg : 'grid';
+  const modeArg = process.argv[4] || 'both';
+  const mode = ['whole', 'rows', 'column', 'both'].indexOf(modeArg) !== -1 ? modeArg : 'both';
   const pair = (process.argv[5] || 'hard-easy').split('-');
   const difficultyA = pair[0];
   const difficultyB = pair[1];

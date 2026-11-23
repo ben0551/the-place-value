@@ -82,11 +82,12 @@
         <div class="field">
           <span class="field-label">Ordering rules</span>
           <div class="pill-group" id="mode-group">
-            <label class="pill"><input type="radio" name="mode" value="grid" checked><span>Whole grid</span></label>
+            <label class="pill"><input type="radio" name="mode" value="whole" checked><span>Whole grid (snake)</span></label>
             <label class="pill"><input type="radio" name="mode" value="rows"><span>Rows only</span></label>
             <label class="pill"><input type="radio" name="mode" value="column"><span>Columns only</span>
+            <label class="pill"><input type="radio" name="mode" value="both"><span>Rows and columns</span></label>
           </div>
-          <p class="field-help">Whole grid: rows and columns both increase from the top-left. Rows only / Columns only: that line just has to stay in one direction.</p>
+          <p class="field-help">Whole grid: one snake path climbs to the top-right, so numbers must rise along it. Rows and columns: every row rises left to right and every column rises top to bottom. The single-axis modes let each line pick its own direction.</p>
         </div>
 
         <div class="field">
@@ -126,9 +127,10 @@
           </label>
           <label class="stacked">Ordering rules
             <select id="host-mode">
-              <option value="grid" selected>Whole grid (rows and columns)</option>
+              <option value="whole" selected>Whole grid (snake path)</option>
               <option value="rows">Rows only</option>
               <option value="column">Columns only</option>
+              <option value="both">Rows and columns</option>
             </select>
           </label>
           <label class="stacked">Match length

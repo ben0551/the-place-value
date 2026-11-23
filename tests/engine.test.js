@@ -51,11 +51,11 @@ test('board sizes match the spec', () => {
   assert.deepStrictEqual(PV.BOARD_SIZES.hard, { rows: 5, cols: 5, label: 'Hard', cells: 25 });
 });
 
-test('createGame defaults to standard / grid / first to 3', () => {
+test('createGame defaults to standard / rows and columns / first to 3', () => {
   const s = PV.createGame({ rng: mulberry32(1) });
   assert.strictEqual(s.rows, 4);
   assert.strictEqual(s.cols, 5);
-  assert.strictEqual(s.mode, 'grid');
+  assert.strictEqual(s.mode, 'both');
   assert.strictEqual(s.targetWins, 3);
   assert.strictEqual(s.phase, 'roll');
   assert.deepStrictEqual(s.scores, [0, 0]);
@@ -206,11 +206,66 @@ test('rows mode: a single value leaves the direction open', () => {
   assert.strictEqual(PV.isLegal(s, 2, 3, 50), false, 'duplicates are not ordered');
 });
 
-test('unknown modes fall back to whole grid', () => {
-  assert.strictEqual(PV.createGame({ mode: 'nope', rng: mulberry32(17) }).mode, 'grid');
+test('unknown modes fall back to rows and columns', () => {
+  assert.strictEqual(PV.createGame({ mode: 'nope', rng: mulberry32(17) }).mode, 'both');
   const s = PV.createGame({ mode: 'rows', rng: mulberry32(18) });
   fill(s, 0, 0, 50);
   assert.strictEqual(PV.isLegal(s, 1, 0, 60), true, 'columns are unconstrained in rows mode');
+});
+
+/* ---------------------------------------------------------- whole grid mode */
+
+test('whole grid: the snake path starts at the bottom-left and climbs', () => {
+  const s = PV.createGame({ size: 'standard', mode: 'whole', rng: mulberry32(40) });
+  const path = PV.pathFor(s);
+  assert.strictEqual(path.length, 20);
+  assert.deepStrictEqual([path[0].r, path[0].c], [3, 0], 'square 1 is the bottom-left');
+  for (let k = 1; k < path.length; k++) {
+    const dr = Math.abs(path[k].r - path[k - 1].r);
+    const dc = Math.abs(path[k].c - path[k - 1].c);
+    assert.strictEqual(dr + dc, 1, `path step ${k} moves to an adjacent square`);
+  }
+  assert.strictEqual(path[path.length - 1].r, 0, 'the largest numbers sit on the top row');
+});
+
+test('whole grid: a 97 in the first square leaves only 98 or 99', () => {
+  const s = PV.createGame({ size: 'easy', mode: 'whole', rng: mulberry32(41) });
+  fill(s, 2, 0, 97); // bottom-left = first square of the snake
+  assert.ok(PV.legalCells(s, 98).length > 0, '98 still has somewhere to go');
+  assert.ok(PV.legalCells(s, 99).length > 0, '99 still has somewhere to go');
+  assert.strictEqual(PV.legalCells(s, 10).length, 0, 'everything after it must be higher');
+  assert.strictEqual(PV.legalCells(s, 50).length, 0);
+});
+
+test('whole grid: a mid-path number bounds both of its neighbours', () => {
+  const s = PV.createGame({ size: 'standard', mode: 'whole', rng: mulberry32(42) });
+  const path = PV.pathFor(s);
+  const mid = path[10];
+  fill(s, mid.r, mid.c, 50);
+  const before = path[9];
+  const after = path[11];
+  assert.strictEqual(PV.isLegal(s, before.r, before.c, 40), true);
+  assert.strictEqual(PV.isLegal(s, before.r, before.c, 60), false);
+  assert.strictEqual(PV.isLegal(s, after.r, after.c, 60), true);
+  assert.strictEqual(PV.isLegal(s, after.r, after.c, 40), false);
+});
+
+test('whole grid: filling the last square wins the round', () => {
+  const s = PV.createGame({ size: 'easy', mode: 'whole', rng: mulberry32(43) });
+  const path = PV.pathFor(s);
+  // Lay an increasing run along the path, leaving the final square empty.
+  for (let k = 0; k < path.length - 1; k++) {
+    const v = 10 + k * 2;
+    assert.strictEqual(PV.isLegal(s, path[k].r, path[k].c, v), true, `path square ${k}`);
+    fill(s, path[k].r, path[k].c, v);
+  }
+  s.phase = 'place';
+  s.current = 0;
+  s.roll = { tens: 9, ones: 9, value: 99, skipped: false };
+  const lastCell = path[path.length - 1];
+  PV.place(s, lastCell.r, lastCell.c);
+  assert.strictEqual(s.phase, 'roundover');
+  assert.strictEqual(s.roundWinner, 0);
 });
 
 /* ------------------------------------------------------------ round endings */
@@ -316,7 +371,7 @@ test('every difficulty returns a legal square', () => {
   for (let game = 0; game < 12; game++) {
     const s = PV.createGame({
       size: ['easy', 'standard', 'hard'][game % 3],
-      mode: ['grid', 'rows', 'column'][game % 3],
+      mode: ['whole', 'rows', 'column', 'both'][game % 4],
       rng: rng,
     });
     for (let turn = 0; turn < 24 && s.phase !== 'matchover'; turn++) {

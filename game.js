@@ -20,9 +20,10 @@
 }(typeof self !== 'undefined' ? self : globalThis, function () {
   'use strict';
 
-  const MODE_GRID = 'grid';     // rows and columns (top-left is smallest)
+  const MODE_WHOLE = 'whole';   // one snake path through every cell
   const MODE_ROWS = 'rows';     // rows only
   const MODE_COLUMN = 'column'; // columns only
+  const MODE_BOTH = 'both';     // rows and columns (top-left is smallest)
 
   const BOARD_SIZES = {
     easy: { rows: 3, cols: 5, label: 'Easy', cells: 15 },
@@ -39,8 +40,30 @@
   }
 
   function normalizeMode(mode) {
-    if (mode === MODE_ROWS || mode === MODE_COLUMN) return mode;
-    return MODE_GRID;
+    if (mode === MODE_WHOLE || mode === MODE_ROWS || mode === MODE_COLUMN) return mode;
+    return MODE_BOTH;
+  }
+
+  /* Whole-grid mode: the board is a single snake (boustrophedon) path, numbered
+   * like a snakes-and-ladders board — square 1 is the bottom-left corner and the
+   * path climbs, alternating direction each row. Values must strictly increase
+   * along the path, so the last square is the largest number on the board. */
+  function pathFor(state) {
+    if (!state._path) {
+      const path = [];
+      for (let r = state.rows - 1; r >= 0; r--) {
+        const cols = [];
+        for (let c = 0; c < state.cols; c++) cols.push(c);
+        if ((state.rows - 1 - r) % 2 === 1) cols.reverse();
+        for (let i = 0; i < cols.length; i++) path.push({ r: r, c: cols[i] });
+      }
+      const index = [];
+      for (let r = 0; r < state.rows; r++) index.push(new Array(state.cols).fill(-1));
+      for (let k = 0; k < path.length; k++) index[path[k].r][path[k].c] = k;
+      state._path = path;
+      state._pathIndex = index;
+    }
+    return state._path;
   }
 
   function emptyBoard(rows, cols) {
@@ -146,7 +169,24 @@
   // `avoid` is set only by a single-occupant line, where either direction works.
   function cellInterval(state, r, c) {
     if (state.board[r][c]) return null;
-    if (state.mode === MODE_GRID) {
+    if (state.mode === MODE_WHOLE) {
+      const path = pathFor(state);
+      const idx = state._pathIndex[r][c];
+      let lo = -Infinity;
+      let hi = Infinity;
+      // Bound by the nearest filled square on either side along the path, so an
+      // early high number really does starve every later square.
+      for (let k = idx - 1; k >= 0; k--) {
+        const cell = state.board[path[k].r][path[k].c];
+        if (cell) { lo = Math.max(lo, cell.value); break; }
+      }
+      for (let k = idx + 1; k < path.length; k++) {
+        const cell = state.board[path[k].r][path[k].c];
+        if (cell) { hi = Math.min(hi, cell.value); break; }
+      }
+      return { lo: lo, hi: hi };
+    }
+    if (state.mode === MODE_BOTH) {
       let lo = -Infinity;
       let hi = Infinity;
       for (let cc = c - 1; cc >= 0; cc--) {
@@ -367,12 +407,14 @@
   }
 
   return {
-    MODE_GRID: MODE_GRID,
+    MODE_WHOLE: MODE_WHOLE,
     MODE_ROWS: MODE_ROWS,
     MODE_COLUMN: MODE_COLUMN,
+    MODE_BOTH: MODE_BOTH,
     BOARD_SIZES: BOARD_SIZES,
     FLIP_VERTICAL: FLIP_VERTICAL,
     formatNumber: formatNumber,
+    pathFor: pathFor,
     createGame: createGame,
     roll: roll,
     cellInterval: cellInterval,
