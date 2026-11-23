@@ -169,7 +169,8 @@ function playMatch(rng, policyA, policyB, size, mode) {
 function main() {
   const games = Number(process.argv[2] || 40);
   const size = process.argv[3] || 'standard';
-  const mode = process.argv[4] === 'column' ? 'column' : 'grid';
+  const modeArg = process.argv[4] || 'grid';
+  const mode = (modeArg === 'rows' || modeArg === 'column') ? modeArg : 'grid';
   const filter = process.argv[5] ? process.argv[5].split(',') : null;
   const allNames = Object.keys(POLICIES);
   const names = filter ? allNames.filter((n) => filter.indexOf(n) !== -1) : allNames;

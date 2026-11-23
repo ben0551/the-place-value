@@ -20,8 +20,9 @@
 }(typeof self !== 'undefined' ? self : globalThis, function () {
   'use strict';
 
-  const MODE_GRID = 'grid';
-  const MODE_COLUMN = 'column';
+  const MODE_GRID = 'grid';     // rows and columns (top-left is smallest)
+  const MODE_ROWS = 'rows';     // rows only
+  const MODE_COLUMN = 'column'; // columns only
 
   const BOARD_SIZES = {
     easy: { rows: 3, cols: 5, label: 'Easy', cells: 15 },
@@ -35,6 +36,11 @@
 
   function formatNumber(value) {
     return String(value).padStart(2, '0');
+  }
+
+  function normalizeMode(mode) {
+    if (mode === MODE_ROWS || mode === MODE_COLUMN) return mode;
+    return MODE_GRID;
   }
 
   function emptyBoard(rows, cols) {
@@ -54,7 +60,7 @@
       rows: size.rows,
       cols: size.cols,
       size: BOARD_SIZES[opts.size] ? opts.size : 'standard',
-      mode: opts.mode === MODE_COLUMN ? MODE_COLUMN : MODE_GRID,
+      mode: normalizeMode(opts.mode),
       targetWins: opts.targetWins || 3,
       names: [opts.names && opts.names[0] ? opts.names[0] : 'Player 1',
               opts.names && opts.names[1] ? opts.names[1] : 'Player 2'],
@@ -98,8 +104,46 @@
 
   /* ------------------------------------------------------- ordering rules */
 
+  // Column mode: gather the filled cells of this column, top to bottom.
+  function columnInterval(state, r, c) {
+    const filled = [];
+    for (let rr = 0; rr < state.rows; rr++) {
+      if (state.board[rr][c]) filled.push({ r: rr, v: state.board[rr][c].value });
+    }
+    return lineInterval(filled, r);
+  }
+
+  // Rows-only mode: the same idea applied along a row, left to right.
+  function rowInterval(state, r, c) {
+    const filled = [];
+    for (let cc = 0; cc < state.cols; cc++) {
+      if (state.board[r][cc]) filled.push({ r: cc, v: state.board[r][cc].value });
+    }
+    return lineInterval(filled, c);
+  }
+
+  // Shared "one line must stay strictly monotonic" rule. `filled` is the line's
+  // occupied positions in order (ascending `r`), `pos` is the empty slot. Once a
+  // line holds two numbers its direction is fixed; a single number leaves it open.
+  function lineInterval(filled, pos) {
+    if (filled.length === 0) return { lo: -Infinity, hi: Infinity };
+    if (filled.length === 1) return { lo: -Infinity, hi: Infinity, avoid: filled[0].v };
+
+    const dir = filled[0].v < filled[1].v ? 'asc' : 'desc';
+    let before = null;
+    let after = null;
+    for (let i = 0; i < filled.length; i++) {
+      if (filled[i].r < pos) before = filled[i];
+      else if (filled[i].r > pos) { after = filled[i]; break; }
+    }
+    if (dir === 'asc') {
+      return { lo: before ? before.v : -Infinity, hi: after ? after.v : Infinity };
+    }
+    return { lo: after ? after.v : -Infinity, hi: before ? before.v : Infinity };
+  }
+
   // Exclusive bounds {lo, hi} for an empty cell: lo < value < hi.
-  // `avoid` is set only by column mode with a single value in the column.
+  // `avoid` is set only by a single-occupant line, where either direction works.
   function cellInterval(state, r, c) {
     if (state.board[r][c]) return null;
     if (state.mode === MODE_GRID) {
@@ -119,26 +163,8 @@
       }
       return { lo: lo, hi: hi };
     }
-
-    // Column mode: gather the filled cells of this column, top to bottom.
-    const filled = [];
-    for (let rr = 0; rr < state.rows; rr++) {
-      if (state.board[rr][c]) filled.push({ r: rr, v: state.board[rr][c].value });
-    }
-    if (filled.length === 0) return { lo: -Infinity, hi: Infinity };
-    if (filled.length === 1) return { lo: -Infinity, hi: Infinity, avoid: filled[0].v };
-
-    const dir = filled[0].v < filled[1].v ? 'asc' : 'desc';
-    let above = null;
-    let below = null;
-    for (let i = 0; i < filled.length; i++) {
-      if (filled[i].r < r) above = filled[i];
-      else if (filled[i].r > r) { below = filled[i]; break; }
-    }
-    if (dir === 'asc') {
-      return { lo: above ? above.v : -Infinity, hi: below ? below.v : Infinity };
-    }
-    return { lo: below ? below.v : -Infinity, hi: above ? above.v : Infinity };
+    if (state.mode === MODE_COLUMN) return columnInterval(state, r, c);
+    return rowInterval(state, r, c);
   }
 
   function isLegal(state, r, c, value) {
@@ -291,7 +317,7 @@
       rows: data.rows || size.rows,
       cols: data.cols || size.cols,
       size: data.size || 'standard',
-      mode: data.mode === MODE_COLUMN ? MODE_COLUMN : MODE_GRID,
+      mode: normalizeMode(data.mode),
       targetWins: data.targetWins || 3,
       names: (data.names && data.names.length === 2) ? data.names.slice() : ['Player 1', 'Player 2'],
       board: data.board,
@@ -342,6 +368,7 @@
 
   return {
     MODE_GRID: MODE_GRID,
+    MODE_ROWS: MODE_ROWS,
     MODE_COLUMN: MODE_COLUMN,
     BOARD_SIZES: BOARD_SIZES,
     FLIP_VERTICAL: FLIP_VERTICAL,

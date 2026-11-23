@@ -27,10 +27,15 @@ First to **3 round wins** takes the match (configurable).
 
 | Mode | Rule |
 |---|---|
-| **Whole grid** (default, recommended) | Every row increases left → right, and every column increases top → bottom. |
-| **Columns only** | Rows are ignored. Each column must be strictly monotonic — the direction is set by the first two numbers placed in that column, and may differ between columns. |
+| **Whole grid** (default) | Every row increases left → right and every column increases top → bottom — the board climbs from the top-left corner to the bottom-right. |
+| **Rows only** | Columns are ignored. Each row must be strictly monotonic; its direction is set by the first two numbers placed in that row, and may differ between rows. |
+| **Columns only** | Rows are ignored. Each column must be strictly monotonic; its direction is set by the first two numbers placed in that column, and may differ between columns. |
 
 Board sizes: **Easy 3×5**, **Standard 4×5**, **Hard 5×5**.
+
+On a wide screen the dice sit beside the board; the game log is collapsed under
+it and expands on click. Below ~720px the dice move underneath and everything
+stacks to full width.
 
 ## Play it
 
@@ -76,22 +81,19 @@ Rounds are short: on a Standard board a round lasts about 9 placements, and
 ending a round by filling the board is rare (0 of 78 rounds in one sample) but
 possible.
 
-## Two spec ambiguities, resolved
-
-The written spec contradicts itself in two places. Both are documented here and
-are one-line changes if you read them the other way.
+## Two rule decisions worth knowing
 
 1. **Vertical direction.** The prose says "higher numbers must be above lower
    numbers", but the worked example board (`05 15 28 64 91` / `12 23 44 70 95` /
-   `22 40 61 80 99`) has the *smallest* numbers at the top. The example was
-   followed: rows increase left → right, columns increase top → bottom. The two
-   readings are isomorphic (flip the board), so only the display changes — set
+   `22 40 61 80 99`) has the *smallest* numbers at the top. The example is the
+   intent: the board climbs from the top-left corner to the bottom-right. The two
+   readings are isomorphic (flip the board), so only the display differs — set
    `FLIP_VERTICAL = true` in `game.js` for the prose reading.
-2. **Column mode direction.** The example column board
+2. **Direction in the single-axis modes.** The spec's column-mode example board
    (`90 12 51` / `80 45 76` / `15 78 99`) contains one *descending* column and
    two ascending ones, so "columns must stay ordered" cannot mean a single fixed
-   direction. It is implemented as: each column must be strictly monotonic, and
-   each column picks its own direction.
+   direction. Column mode therefore lets each column pick its own direction once
+   it holds two numbers, and rows-only mode does the same per row.
 
 ## Online multiplayer
 

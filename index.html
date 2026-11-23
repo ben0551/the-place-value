@@ -83,9 +83,10 @@
           <span class="field-label">Ordering rules</span>
           <div class="pill-group" id="mode-group">
             <label class="pill"><input type="radio" name="mode" value="grid" checked><span>Whole grid</span></label>
+            <label class="pill"><input type="radio" name="mode" value="rows"><span>Rows only</span></label>
             <label class="pill"><input type="radio" name="mode" value="column"><span>Columns only</span>
           </div>
-          <p class="field-help">Whole grid: rows and columns both increase. Columns only: each column just has to stay in one direction.</p>
+          <p class="field-help">Whole grid: rows and columns both increase from the top-left. Rows only / Columns only: that line just has to stay in one direction.</p>
         </div>
 
         <div class="field">
@@ -125,7 +126,8 @@
           </label>
           <label class="stacked">Ordering rules
             <select id="host-mode">
-              <option value="grid" selected>Whole grid</option>
+              <option value="grid" selected>Whole grid (rows and columns)</option>
+              <option value="rows">Rows only</option>
               <option value="column">Columns only</option>
             </select>
           </label>
@@ -197,31 +199,35 @@
 
       <div id="turn-banner" class="turn-banner">Your turn</div>
 
-      <div class="board-wrap">
-        <div id="board" class="board" role="grid" aria-label="Game board"></div>
-      </div>
-
-      <div class="dice-row">
-        <div class="dice" id="dice">
-          <span class="die" id="die-tens">&minus;</span>
-          <span class="die" id="die-ones">&minus;</span>
+      <div class="game-layout">
+        <div class="board-col">
+          <div class="board-wrap">
+            <div id="board" class="board" role="grid" aria-label="Game board"></div>
+          </div>
         </div>
-        <div class="dice-info">
-          <div class="last-roll" id="last-roll">No roll yet</div>
-          <div class="dice-help" id="dice-help">Roll the dice to begin.</div>
-        </div>
-        <button id="btn-roll" type="button" class="btn primary">Roll</button>
+        <aside class="side-col">
+          <div class="dice-panel">
+            <div class="dice" id="dice">
+              <span class="die" id="die-tens">&minus;</span>
+              <span class="die" id="die-ones">&minus;</span>
+            </div>
+            <div class="dice-info">
+              <div class="last-roll" id="last-roll">No roll yet</div>
+              <div class="dice-help" id="dice-help">Roll the dice to begin.</div>
+            </div>
+          </div>
+          <button id="btn-roll" type="button" class="btn primary big">Roll</button>
+          <div class="game-actions">
+            <button id="btn-rematch" type="button" class="btn ghost small" hidden>Rematch</button>
+            <button id="btn-quit" type="button" class="btn ghost small">Quit to menu</button>
+          </div>
+        </aside>
       </div>
 
-      <div class="game-actions">
-        <button id="btn-rematch" type="button" class="btn ghost small" hidden>Rematch</button>
-        <button id="btn-quit" type="button" class="btn ghost small">Quit to menu</button>
-      </div>
-
-      <div class="log-panel">
-        <div class="log-head">Game log</div>
+      <details class="log-panel" id="log-details">
+        <summary>Game log</summary>
         <div id="log" class="log" aria-live="polite"></div>
-      </div>
+      </details>
     </section>
 
   </main>

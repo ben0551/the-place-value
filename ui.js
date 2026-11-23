@@ -371,7 +371,7 @@
       '<li>The dice make a two-digit number, like <kbd>0</kbd> + <kbd>7</kbd> = <kbd>07</kbd>.</li>' +
       '<li>Place that number in any empty square, as long as the board stays in order.</li>' +
       '<li><strong>Whole grid:</strong> numbers increase left to right and top to bottom.</li>' +
-      '<li><strong>Columns only:</strong> each column must stay in one direction — rows are ignored.</li>' +
+      '<li><strong>Rows only / Columns only:</strong> only those lines are constrained &mdash; each one just has to stay in a single direction.</li>' +
       '<li>Roll <kbd>00</kbd> and your turn is skipped. No reroll.</li>' +
       '<li>If the number you roll has <strong>nowhere legal</strong> to go, you lose the round.</li>' +
       '<li>Fill the last empty square and you win the round.</li>' +

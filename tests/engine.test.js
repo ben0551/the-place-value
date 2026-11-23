@@ -181,6 +181,38 @@ test('the spec column-mode example board is legal', () => {
   }
 });
 
+test('rows mode ignores the columns', () => {
+  const s = PV.createGame({ mode: 'rows', rng: mulberry32(14) });
+  fill(s, 0, 0, 90);
+  fill(s, 0, 1, 10); // same row, would break a whole-grid row rule
+  assert.strictEqual(PV.isLegal(s, 0, 2, 5), true);
+});
+
+test('rows mode: a row keeps one direction once two values are down', () => {
+  const s = PV.createGame({ mode: 'rows', rng: mulberry32(15) });
+  fill(s, 1, 1, 20);
+  fill(s, 1, 2, 80); // ascending
+  assert.strictEqual(PV.isLegal(s, 1, 0, 10), true);
+  assert.strictEqual(PV.isLegal(s, 1, 0, 30), false, 'must stay below 20');
+  assert.strictEqual(PV.isLegal(s, 1, 3, 70), false, 'must stay under 80');
+  assert.strictEqual(PV.isLegal(s, 1, 3, 90), true);
+});
+
+test('rows mode: a single value leaves the direction open', () => {
+  const s = PV.createGame({ mode: 'rows', rng: mulberry32(16) });
+  fill(s, 2, 4, 50);
+  assert.strictEqual(PV.isLegal(s, 2, 3, 10), true);
+  assert.strictEqual(PV.isLegal(s, 2, 3, 90), true);
+  assert.strictEqual(PV.isLegal(s, 2, 3, 50), false, 'duplicates are not ordered');
+});
+
+test('unknown modes fall back to whole grid', () => {
+  assert.strictEqual(PV.createGame({ mode: 'nope', rng: mulberry32(17) }).mode, 'grid');
+  const s = PV.createGame({ mode: 'rows', rng: mulberry32(18) });
+  fill(s, 0, 0, 50);
+  assert.strictEqual(PV.isLegal(s, 1, 0, 60), true, 'columns are unconstrained in rows mode');
+});
+
 /* ------------------------------------------------------------ round endings */
 
 test('a roll with no legal square loses the round for the roller', () => {
@@ -284,7 +316,7 @@ test('every difficulty returns a legal square', () => {
   for (let game = 0; game < 12; game++) {
     const s = PV.createGame({
       size: ['easy', 'standard', 'hard'][game % 3],
-      mode: game % 2 ? 'column' : 'grid',
+      mode: ['grid', 'rows', 'column'][game % 3],
       rng: rng,
     });
     for (let turn = 0; turn < 24 && s.phase !== 'matchover'; turn++) {
