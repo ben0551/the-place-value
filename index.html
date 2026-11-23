@@ -86,8 +86,9 @@
             <label class="pill"><input type="radio" name="mode" value="rows"><span>Rows only</span></label>
             <label class="pill"><input type="radio" name="mode" value="column"><span>Columns only</span>
             <label class="pill"><input type="radio" name="mode" value="both"><span>Rows and columns</span></label>
+            <label class="pill"><input type="radio" name="mode" value="sudoku"><span>Sudoku</span></label>
           </div>
-          <p class="field-help">Whole grid: one snake path climbs to the top-right, so numbers must rise along it. Rows and columns: every row rises left to right and every column rises top to bottom. The single-axis modes let each line pick its own direction.</p>
+          <p class="field-help">Whole grid: one snake path climbs to the top-right. Sudoku: every row, column and diagonal must rise. The single-axis modes let each line pick its own direction.</p>
         </div>
 
         <div class="field">
@@ -131,6 +132,7 @@
               <option value="rows">Rows only</option>
               <option value="column">Columns only</option>
               <option value="both">Rows and columns</option>
+              <option value="sudoku">Sudoku (rows, columns, diagonals)</option>
             </select>
           </label>
           <label class="stacked">Match length

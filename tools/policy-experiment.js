@@ -170,7 +170,7 @@ function main() {
   const games = Number(process.argv[2] || 40);
   const size = process.argv[3] || 'standard';
   const modeArg = process.argv[4] || 'both';
-  const mode = ['whole', 'rows', 'column', 'both'].indexOf(modeArg) !== -1 ? modeArg : 'both';
+  const mode = ['whole', 'rows', 'column', 'both', 'sudoku'].indexOf(modeArg) !== -1 ? modeArg : 'both';
   const filter = process.argv[5] ? process.argv[5].split(',') : null;
   const allNames = Object.keys(POLICIES);
   const names = filter ? allNames.filter((n) => filter.indexOf(n) !== -1) : allNames;

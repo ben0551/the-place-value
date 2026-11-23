@@ -373,6 +373,7 @@
       '<li><strong>Whole grid:</strong> the board is one snake path that climbs to the top-right corner &mdash; numbers must rise along that path.</li>' +
       '<li><strong>Rows only / Columns only:</strong> only those lines are constrained &mdash; each one just has to stay in a single direction.</li>' +
       '<li><strong>Rows and columns:</strong> every row rises left to right and every column rises top to bottom.</li>' +
+      '<li><strong>Sudoku:</strong> every row, every column and both diagonal families must rise towards the bottom of the board.</li>' +
       '<li>Roll <kbd>00</kbd> and your turn is skipped. No reroll.</li>' +
       '<li>If the number you roll has <strong>nowhere legal</strong> to go, you lose the round.</li>' +
       '<li>Fill the last empty square and you win the round.</li>' +

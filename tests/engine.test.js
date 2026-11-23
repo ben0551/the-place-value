@@ -268,6 +268,22 @@ test('whole grid: filling the last square wins the round', () => {
   assert.strictEqual(s.roundWinner, 0);
 });
 
+/* ----------------------------------------------------------- sudoku mode */
+
+test('sudoku mode: both diagonal families are ordered', () => {
+  const s = PV.createGame({ size: 'easy', mode: 'sudoku', rng: mulberry32(60) });
+  fill(s, 0, 4, 90);
+  assert.strictEqual(PV.isLegal(s, 1, 3, 95), true, 'down-left continues upward');
+  assert.strictEqual(PV.isLegal(s, 1, 3, 80), false, 'must beat the up-right neighbour');
+  assert.strictEqual(PV.isLegal(s, 1, 4, 95), true, 'below must be higher');
+  assert.strictEqual(PV.isLegal(s, 1, 4, 80), false);
+
+  const t = PV.createGame({ size: 'easy', mode: 'sudoku', rng: mulberry32(61) });
+  fill(t, 0, 0, 10);
+  assert.strictEqual(PV.isLegal(t, 1, 1, 20), true, 'down-right continues upward');
+  assert.strictEqual(PV.isLegal(t, 1, 1, 5), false);
+});
+
 /* ------------------------------------------------------------ round endings */
 
 test('a roll with no legal square loses the round for the roller', () => {
@@ -371,7 +387,7 @@ test('every difficulty returns a legal square', () => {
   for (let game = 0; game < 12; game++) {
     const s = PV.createGame({
       size: ['easy', 'standard', 'hard'][game % 3],
-      mode: ['whole', 'rows', 'column', 'both'][game % 4],
+      mode: ['whole', 'rows', 'column', 'both', 'sudoku'][game % 5],
       rng: rng,
     });
     for (let turn = 0; turn < 24 && s.phase !== 'matchover'; turn++) {

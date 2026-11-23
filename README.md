@@ -31,12 +31,13 @@ First to **3 round wins** takes the match (configurable).
 | **Rows only** | Columns are ignored. Each row must be strictly monotonic; its direction is set by the first two numbers placed in that row, and may differ between rows. |
 | **Columns only** | Rows are ignored. Each column must be strictly monotonic; its direction is set by the first two numbers placed in that column, and may differ between columns. |
 | **Rows and columns** | Every row increases left → right and every column increases top → bottom — the board climbs from the top-left corner to the bottom-right. |
+| **Sudoku** | Rows, columns *and* both diagonal families all rise towards the bottom of the board. |
 
 Board sizes: **Easy 3×5**, **Standard 4×5**, **Hard 5×5**.
 
-Measured round length with random play: **whole grid ≈ 4 placements per round**,
-rows and columns ≈ 7. Whole grid is the tight, swingy mode — a high number
-played early starves every square after it.
+Measured round length with random play (Standard board): **whole grid ≈ 4
+placements per round**, sudoku ≈ 7, rows and columns ≈ 8. Whole grid is the tight,
+swingy mode — a high number played early starves every square after it.
 
 On a wide screen the dice sit beside the board; the game log is collapsed under
 it and expands on click. Below ~720px the dice move underneath and everything
@@ -105,6 +106,11 @@ possible.
    numbers at the top. The example is the intent: the board climbs from the
    top-left to the bottom-right. The readings are isomorphic, so only the display
    differs — set `FLIP_VERTICAL = true` in `game.js` for the prose reading.
+4. **Sudoku diagonals.** "Every row, column and diagonal" is taken literally:
+   both diagonal families, not just the two longest. Each rises towards the bottom
+   of the board, matching the rows-and-columns direction. The north-west family
+   adds nothing beyond rows + columns (transitivity); the north-east one, rising
+   down-left, is the real extra constraint.
 
 ## Online multiplayer
 
@@ -126,7 +132,7 @@ Plain HTML/CSS/vanilla JS. No build step, no dependencies to install.
 
 ```
 node tests/engine.test.js          # engine + AI tests
-node tools/sim.js 60 standard both hard-easy
+node tools/sim.js 60 standard sudoku hard-easy
 node tools/policy-experiment.js 40 standard both
 ```
 

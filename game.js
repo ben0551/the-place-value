@@ -24,6 +24,7 @@
   const MODE_ROWS = 'rows';     // rows only
   const MODE_COLUMN = 'column'; // columns only
   const MODE_BOTH = 'both';     // rows and columns (top-left is smallest)
+  const MODE_SUDOKU = 'sudoku'; // rows, columns and both diagonal families
 
   const BOARD_SIZES = {
     easy: { rows: 3, cols: 5, label: 'Easy', cells: 15 },
@@ -40,7 +41,7 @@
   }
 
   function normalizeMode(mode) {
-    if (mode === MODE_WHOLE || mode === MODE_ROWS || mode === MODE_COLUMN) return mode;
+    if (mode === MODE_WHOLE || mode === MODE_ROWS || mode === MODE_COLUMN || mode === MODE_SUDOKU) return mode;
     return MODE_BOTH;
   }
 
@@ -182,6 +183,44 @@
       }
       for (let k = idx + 1; k < path.length; k++) {
         const cell = state.board[path[k].r][path[k].c];
+        if (cell) { hi = Math.min(hi, cell.value); break; }
+      }
+      return { lo: lo, hi: hi };
+    }
+    if (state.mode === MODE_SUDOKU) {
+      let lo = -Infinity;
+      let hi = Infinity;
+      // rows: rise to the right
+      for (let cc = c - 1; cc >= 0; cc--) {
+        if (state.board[r][cc]) { lo = Math.max(lo, state.board[r][cc].value); break; }
+      }
+      for (let cc = c + 1; cc < state.cols; cc++) {
+        if (state.board[r][cc]) { hi = Math.min(hi, state.board[r][cc].value); break; }
+      }
+      // columns: rise downwards
+      for (let rr = r - 1; rr >= 0; rr--) {
+        if (state.board[rr][c]) { lo = Math.max(lo, state.board[rr][c].value); break; }
+      }
+      for (let rr = r + 1; rr < state.rows; rr++) {
+        if (state.board[rr][c]) { hi = Math.min(hi, state.board[rr][c].value); break; }
+      }
+      // both diagonal families rise towards the bottom of the board. The
+      // north-west diagonals are already implied by rows + columns; the
+      // north-east ones (down-left) are the extra constraint.
+      for (let k = 1; r - k >= 0 && c - k >= 0; k++) {
+        const cell = state.board[r - k][c - k];
+        if (cell) { lo = Math.max(lo, cell.value); break; }
+      }
+      for (let k = 1; r + k < state.rows && c + k < state.cols; k++) {
+        const cell = state.board[r + k][c + k];
+        if (cell) { hi = Math.min(hi, cell.value); break; }
+      }
+      for (let k = 1; r - k >= 0 && c + k < state.cols; k++) {
+        const cell = state.board[r - k][c + k];
+        if (cell) { lo = Math.max(lo, cell.value); break; }
+      }
+      for (let k = 1; r + k < state.rows && c - k >= 0; k++) {
+        const cell = state.board[r + k][c - k];
         if (cell) { hi = Math.min(hi, cell.value); break; }
       }
       return { lo: lo, hi: hi };
@@ -411,6 +450,7 @@
     MODE_ROWS: MODE_ROWS,
     MODE_COLUMN: MODE_COLUMN,
     MODE_BOTH: MODE_BOTH,
+    MODE_SUDOKU: MODE_SUDOKU,
     BOARD_SIZES: BOARD_SIZES,
     FLIP_VERTICAL: FLIP_VERTICAL,
     formatNumber: formatNumber,
