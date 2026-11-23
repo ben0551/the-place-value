@@ -150,6 +150,7 @@
     board.style.setProperty('--cols', String(state.cols));
     board.innerHTML = '';
     App.cellEls = [];
+    const arrows = state.mode === 'whole' ? pathArrows(state) : null;
     displayRows(state).forEach(function (r) {
       for (let c = 0; c < state.cols; c++) {
         const el = document.createElement('button');
@@ -159,15 +160,26 @@
         el.dataset.c = String(c);
         el.setAttribute('role', 'gridcell');
         el.addEventListener('click', function () { onCellClick(r, c); });
+        const value = document.createElement('span');
+        value.className = 'cell-value';
+        el.appendChild(value);
+        if (arrows) {
+          const arrow = document.createElement('span');
+          arrow.className = 'path-arrow';
+          arrow.setAttribute('aria-hidden', 'true');
+          arrow.textContent = arrows[r + ',' + c] || '';
+          el.appendChild(arrow);
+          if (arrows[r + ',' + c]) el.classList.add('has-arrow');
+        }
         board.appendChild(el);
         App.cellEls.push(el);
       }
     });
-    App.boardKey = state.rows + 'x' + state.cols;
+    App.boardKey = state.rows + 'x' + state.cols + ':' + state.mode;
   }
 
   function updateBoard(state) {
-    if (App.boardKey !== state.rows + 'x' + state.cols) buildBoard(state);
+    if (App.boardKey !== state.rows + 'x' + state.cols + ':' + state.mode) buildBoard(state);
     const highlight = (state.phase === 'place' && state.roll && !state.roll.skipped)
       ? state.roll.value : null;
     const rows = displayRows(state);
@@ -186,11 +198,50 @@
         cls += PV.isLegal(state, r, c, highlight) ? ' legal' : ' illegal';
       }
       el.className = cls;
-      if (el.textContent !== text) el.textContent = text;
+      // Write through the label span so the snake arrow survives re-renders.
+      const label = el.querySelector('.cell-value');
+      if (label) {
+        if (label.textContent !== text) label.textContent = text;
+      } else if (el.textContent !== text) {
+        el.textContent = text;
+      }
       el.setAttribute('aria-label',
         text ? ('Row ' + (r + 1) + ' column ' + (c + 1) + ': ' + text + ' by ' + playerLabel(cell.player))
              : ('Row ' + (r + 1) + ' column ' + (c + 1) + ': empty'));
     }
+  }
+
+  // Whole-grid mode: which way the snake leaves each square.
+  const PATH_GLYPHS = { right: '→', left: '←', up: '↑', down: '↓' };
+
+  function pathArrows(state) {
+    const path = PV.pathFor(state);
+    const map = {};
+    for (let k = 0; k < path.length - 1; k++) {
+      const a = path[k];
+      const b = path[k + 1];
+      const dc = b.c - a.c;
+      const dr = b.r - a.r;
+      let dir = '';
+      if (dc === 1) dir = 'right';
+      else if (dc === -1) dir = 'left';
+      else if (dr === -1) dir = 'up';
+      else dir = 'down';
+      map[a.r + ',' + a.c] = PATH_GLYPHS[dir];
+    }
+    return map;
+  }
+
+  const MODE_CAPTIONS = {
+    whole: 'Whole grid: follow the arrows. The snake starts at the bottom-left and finishes on the top row.',
+    rows: 'Rows only: every row rises to the right.',
+    column: 'Columns only: every column rises to the bottom.',
+    both: 'Rows and columns: numbers rise to the right and towards the bottom.',
+    sudoku: 'Sudoku: rows, columns and diagonals all rise towards the bottom-right.',
+  };
+
+  function renderCaption(state) {
+    $('mode-caption').textContent = MODE_CAPTIONS[state.mode] || '';
   }
 
   function renderScore(state) {
@@ -293,6 +344,7 @@
   function renderAll() {
     const state = App.game;
     if (!state) return;
+    renderCaption(state);
     renderScore(state);
     updateBoard(state);
     renderDice(state);
@@ -313,12 +365,46 @@
     $('overlay-card').innerHTML = '';
   }
 
+  // Why the round ended, so a loss on a small screen is still explainable.
+  function roundDetail(state) {
+    const winner = state.roundWinner;
+    for (let i = state.log.length - 1; i >= 0; i--) {
+      const line = state.log[i];
+      if (/could not place/.test(line)) {
+        const loser = 1 - winner;
+        const value = state.roll ? PV.formatNumber(state.roll.value) : 'that number';
+        return playerLabel(loser) + ' rolled ' + value
+          + ' and no empty square could legally take it.';
+      }
+      if (/board completely filled/.test(line)) {
+        return playerLabel(winner) + ' filled the last empty square.';
+      }
+    }
+    return '';
+  }
+
+  // Headline from the local player's point of view in single-player games.
+  function outcomeHeading(state) {
+    const isMatch = state.phase === 'matchover';
+    const winner = isMatch ? state.matchWinner : state.roundWinner;
+    const what = isMatch ? 'the match' : 'round ' + state.round;
+    if (App.mode === 'online') {
+      return winner === App.onlineSeat ? 'You win ' + what + '!' : 'You lose ' + what + '.';
+    }
+    if (App.mode === 'ai') {
+      return winner === 0 ? 'You win ' + what + '!' : 'You lose ' + what + '.';
+    }
+    return playerLabel(winner) + ' wins ' + what;
+  }
+
   function showRoundOverlay(state) {
     if (state.phase === 'matchover') { showMatchOverlay(state); return; }
     const online = App.mode === 'online' && App.onlineSeat !== 0;
+    const detail = roundDetail(state);
     showOverlay(
-      '<h2>' + escapeHtml(playerLabel(state.roundWinner)) + ' wins round ' + state.round + '</h2>' +
+      '<h2>' + escapeHtml(outcomeHeading(state)) + '</h2>' +
       '<p class="scoreline">' + state.scores[0] + ' – ' + state.scores[1] + '</p>' +
+      (detail ? '<p class="reason">' + escapeHtml(detail) + '</p>' : '') +
       '<p>' + (online ? 'Waiting for the host to start the next round.'
                      : 'First to ' + state.targetWins + ' round wins takes the match.') + '</p>' +
       '<div class="form-actions">' +
@@ -340,9 +426,11 @@
   function showMatchOverlay(state) {
     const online = App.mode === 'online';
     const canRematch = !online || App.onlineSeat === 0;
+    const detail = roundDetail(state);
     showOverlay(
-      '<h2>' + escapeHtml(playerLabel(state.matchWinner)) + ' wins the match!</h2>' +
+      '<h2>' + escapeHtml(outcomeHeading(state)) + '</h2>' +
       '<p class="scoreline">' + state.scores[0] + ' – ' + state.scores[1] + '</p>' +
+      (detail ? '<p class="reason">' + escapeHtml(detail) + '</p>' : '') +
       '<p>' + (online && !canRematch ? 'Waiting for the host to start the rematch.'
                                    : 'Same players, same settings, fresh board.') + '</p>' +
       '<div class="form-actions">' +
