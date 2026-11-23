@@ -1,0 +1,366 @@
+/* The Place Value — pure game engine. No DOM access, no side effects.
+ *
+ * Board convention (matches the worked example in the spec):
+ *   row 0 is the TOP row, column 0 is the LEFT column.
+ *   Whole Grid mode: every row increases left -> right, every column
+ *     increases top -> bottom (so the smallest number sits top-left).
+ *   Column mode: rows are ignored; each column must be strictly monotonic
+ *     (either ascending or descending — the direction is fixed by the first
+ *     two values placed in that column).
+ *
+ * The spec's prose says "higher numbers must be above lower numbers", which is
+ * the vertical mirror of the example board it prints. The two are isomorphic
+ * (flip the board upside down), so only the display differs. FLIP_VERTICAL
+ * below switches the rendered orientation without changing the strategy.
+ */
+(function (root, factory) {
+  const api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.PlaceValue = api;
+}(typeof self !== 'undefined' ? self : globalThis, function () {
+  'use strict';
+
+  const MODE_GRID = 'grid';
+  const MODE_COLUMN = 'column';
+
+  const BOARD_SIZES = {
+    easy: { rows: 3, cols: 5, label: 'Easy', cells: 15 },
+    standard: { rows: 4, cols: 5, label: 'Standard', cells: 20 },
+    hard: { rows: 5, cols: 5, label: 'Hard', cells: 25 },
+  };
+
+  // Set to true to render columns growing upwards (spec prose) instead of
+  // downwards (spec example). Purely cosmetic — the game tree is identical.
+  const FLIP_VERTICAL = false;
+
+  function formatNumber(value) {
+    return String(value).padStart(2, '0');
+  }
+
+  function emptyBoard(rows, cols) {
+    const board = [];
+    for (let r = 0; r < rows; r++) {
+      const row = [];
+      for (let c = 0; c < cols; c++) row.push(null);
+      board.push(row);
+    }
+    return board;
+  }
+
+  function createGame(opts) {
+    opts = opts || {};
+    const size = BOARD_SIZES[opts.size] || BOARD_SIZES.standard;
+    const state = {
+      rows: size.rows,
+      cols: size.cols,
+      size: BOARD_SIZES[opts.size] ? opts.size : 'standard',
+      mode: opts.mode === MODE_COLUMN ? MODE_COLUMN : MODE_GRID,
+      targetWins: opts.targetWins || 3,
+      names: [opts.names && opts.names[0] ? opts.names[0] : 'Player 1',
+              opts.names && opts.names[1] ? opts.names[1] : 'Player 2'],
+      board: emptyBoard(size.rows, size.cols),
+      current: 0,
+      scores: [0, 0],
+      round: 1,
+      phase: 'roll', // 'roll' | 'place' | 'roundover' | 'matchover'
+      roll: null,
+      roundWinner: null,
+      matchWinner: null,
+      placements: 0,
+      log: [],
+      rng: opts.rng || Math.random,
+    };
+    return state;
+  }
+
+  function pushLog(state, message) {
+    state.log.push(message);
+    if (state.log.length > 200) state.log.splice(0, state.log.length - 200);
+  }
+
+  /* ---------------------------------------------------------------- roll */
+
+  function roll(state) {
+    if (state.phase !== 'roll') throw new Error('roll() called outside the roll phase');
+    const tens = Math.floor(state.rng() * 10);
+    const ones = Math.floor(state.rng() * 10);
+    const value = tens * 10 + ones;
+    state.roll = { tens: tens, ones: ones, value: value, skipped: value === 0 };
+    if (value === 0) {
+      pushLog(state, state.names[state.current] + ' rolled 00 - turn skipped.');
+      state.current = 1 - state.current;
+      return state.roll;
+    }
+    pushLog(state, state.names[state.current] + ' rolled ' + formatNumber(value) + '.');
+    state.phase = 'place';
+    return state.roll;
+  }
+
+  /* ------------------------------------------------------- ordering rules */
+
+  // Exclusive bounds {lo, hi} for an empty cell: lo < value < hi.
+  // `avoid` is set only by column mode with a single value in the column.
+  function cellInterval(state, r, c) {
+    if (state.board[r][c]) return null;
+    if (state.mode === MODE_GRID) {
+      let lo = -Infinity;
+      let hi = Infinity;
+      for (let cc = c - 1; cc >= 0; cc--) {
+        if (state.board[r][cc]) { lo = Math.max(lo, state.board[r][cc].value); break; }
+      }
+      for (let cc = c + 1; cc < state.cols; cc++) {
+        if (state.board[r][cc]) { hi = Math.min(hi, state.board[r][cc].value); break; }
+      }
+      for (let rr = r - 1; rr >= 0; rr--) {
+        if (state.board[rr][c]) { lo = Math.max(lo, state.board[rr][c].value); break; }
+      }
+      for (let rr = r + 1; rr < state.rows; rr++) {
+        if (state.board[rr][c]) { hi = Math.min(hi, state.board[rr][c].value); break; }
+      }
+      return { lo: lo, hi: hi };
+    }
+
+    // Column mode: gather the filled cells of this column, top to bottom.
+    const filled = [];
+    for (let rr = 0; rr < state.rows; rr++) {
+      if (state.board[rr][c]) filled.push({ r: rr, v: state.board[rr][c].value });
+    }
+    if (filled.length === 0) return { lo: -Infinity, hi: Infinity };
+    if (filled.length === 1) return { lo: -Infinity, hi: Infinity, avoid: filled[0].v };
+
+    const dir = filled[0].v < filled[1].v ? 'asc' : 'desc';
+    let above = null;
+    let below = null;
+    for (let i = 0; i < filled.length; i++) {
+      if (filled[i].r < r) above = filled[i];
+      else if (filled[i].r > r) { below = filled[i]; break; }
+    }
+    if (dir === 'asc') {
+      return { lo: above ? above.v : -Infinity, hi: below ? below.v : Infinity };
+    }
+    return { lo: below ? below.v : -Infinity, hi: above ? above.v : Infinity };
+  }
+
+  function isLegal(state, r, c, value) {
+    if (state.board[r][c]) return false;
+    const iv = cellInterval(state, r, c);
+    if (value <= iv.lo || value >= iv.hi) return false;
+    if (iv.avoid !== undefined && value === iv.avoid) return false;
+    return true;
+  }
+
+  function legalCells(state, value) {
+    const out = [];
+    for (let r = 0; r < state.rows; r++) {
+      for (let c = 0; c < state.cols; c++) {
+        if (isLegal(state, r, c, value)) out.push({ r: r, c: c });
+      }
+    }
+    return out;
+  }
+
+  // 0 = filled, 1 = empty and legal for `value`, 2 = empty and illegal.
+  function cellStatus(state, r, c, value) {
+    if (state.board[r][c]) return 0;
+    return isLegal(state, r, c, value) ? 1 : 2;
+  }
+
+  /* ------------------------------------------------------------- placement */
+
+  function placeValue(state, r, c, value) {
+    if (!isLegal(state, r, c, value)) return { ok: false };
+    state.board[r][c] = { value: value, player: state.current };
+    state.placements++;
+    pushLog(state, state.names[state.current] + ' placed ' + formatNumber(value)
+      + ' at row ' + (r + 1) + ', column ' + (c + 1) + '.');
+    state.roll = null;
+    if (state.placements === state.rows * state.cols) {
+      endRound(state, state.current, 'board completely filled');
+      return { ok: true, full: true };
+    }
+    state.current = 1 - state.current;
+    state.phase = 'roll';
+    return { ok: true, full: false };
+  }
+
+  function place(state, r, c) {
+    if (state.phase !== 'place') throw new Error('place() called outside the place phase');
+    return placeValue(state, r, c, state.roll.value);
+  }
+
+  // The current player rolled a number they cannot place anywhere.
+  function loseRound(state) {
+    const loser = state.current;
+    endRound(state, 1 - loser,
+      state.names[loser] + ' could not place ' + formatNumber(state.roll.value));
+    return state.roundWinner;
+  }
+
+  function endRound(state, winner, reason) {
+    state.roundWinner = winner;
+    state.scores[winner]++;
+    state.phase = 'roundover';
+    pushLog(state, state.names[winner] + ' wins round ' + state.round
+      + ' (' + reason + '). Match score ' + state.scores[0] + '-' + state.scores[1] + '.');
+    if (state.scores[winner] >= state.targetWins) {
+      state.matchWinner = winner;
+      state.phase = 'matchover';
+      pushLog(state, state.names[winner] + ' wins the match!');
+    }
+  }
+
+  function nextRound(state) {
+    if (state.phase !== 'roundover') throw new Error('nextRound() called before the round ended');
+    state.round++;
+    state.board = emptyBoard(state.rows, state.cols);
+    state.current = 0;
+    state.phase = 'roll';
+    state.roll = null;
+    state.roundWinner = null;
+    state.placements = 0;
+    pushLog(state, '--- Round ' + state.round + ' ---');
+    return state;
+  }
+
+  /* --------------------------------------------------------- AI / analysis */
+
+  // How many empty cells could still accept at least one value (1..99).
+  function feasibleCount(state) {
+    let count = 0;
+    for (let r = 0; r < state.rows; r++) {
+      for (let c = 0; c < state.cols; c++) {
+        if (state.board[r][c]) continue;
+        const iv = cellInterval(state, r, c);
+        const lo = Math.max(iv.lo, 0);
+        const hi = Math.min(iv.hi, 100);
+        let width = hi - lo - 1;
+        if (iv.avoid !== undefined && iv.avoid > lo && iv.avoid < hi) width -= 1;
+        if (width > 0) count++;
+      }
+    }
+    return count;
+  }
+
+  // Sum of the widths of every empty cell's feasible interval.
+  function flexibility(state) {
+    let total = 0;
+    for (let r = 0; r < state.rows; r++) {
+      for (let c = 0; c < state.cols; c++) {
+        if (state.board[r][c]) continue;
+        const iv = cellInterval(state, r, c);
+        const lo = Math.max(iv.lo, 0);
+        const hi = Math.min(iv.hi, 100);
+        let width = hi - lo - 1;
+        if (iv.avoid !== undefined && iv.avoid > lo && iv.avoid < hi) width -= 1;
+        if (width > 0) total += width;
+      }
+    }
+    return total;
+  }
+
+  /* ---------------------------------------------------------- serialisation */
+
+  function serialize(state) {
+    return {
+      rows: state.rows,
+      cols: state.cols,
+      size: state.size,
+      mode: state.mode,
+      targetWins: state.targetWins,
+      names: state.names.slice(),
+      board: state.board.map(function (row) {
+        return row.map(function (cell) {
+          return cell ? { value: cell.value, player: cell.player } : null;
+        });
+      }),
+      current: state.current,
+      scores: state.scores.slice(),
+      round: state.round,
+      phase: state.phase,
+      roll: state.roll ? { tens: state.roll.tens, ones: state.roll.ones, value: state.roll.value, skipped: !!state.roll.skipped } : null,
+      roundWinner: state.roundWinner,
+      matchWinner: state.matchWinner,
+      placements: state.placements,
+      log: state.log.slice(-50),
+    };
+  }
+
+  function deserialize(data, rng) {
+    const size = BOARD_SIZES[data.size] || BOARD_SIZES.standard;
+    const state = {
+      rows: data.rows || size.rows,
+      cols: data.cols || size.cols,
+      size: data.size || 'standard',
+      mode: data.mode === MODE_COLUMN ? MODE_COLUMN : MODE_GRID,
+      targetWins: data.targetWins || 3,
+      names: (data.names && data.names.length === 2) ? data.names.slice() : ['Player 1', 'Player 2'],
+      board: data.board,
+      current: data.current || 0,
+      scores: data.scores ? data.scores.slice() : [0, 0],
+      round: data.round || 1,
+      phase: data.phase || 'roll',
+      roll: data.roll || null,
+      roundWinner: data.roundWinner === undefined ? null : data.roundWinner,
+      matchWinner: data.matchWinner === undefined ? null : data.matchWinner,
+      placements: data.placements || 0,
+      log: data.log ? data.log.slice(-50) : [],
+      rng: rng || Math.random,
+    };
+    return state;
+  }
+
+  function cloneState(state) {
+    const board = new Array(state.rows);
+    for (let r = 0; r < state.rows; r++) {
+      const row = new Array(state.cols);
+      for (let c = 0; c < state.cols; c++) {
+        const cell = state.board[r][c];
+        row[c] = cell ? { value: cell.value, player: cell.player } : null;
+      }
+      board[r] = row;
+    }
+    return {
+      rows: state.rows,
+      cols: state.cols,
+      size: state.size,
+      mode: state.mode,
+      targetWins: state.targetWins,
+      names: state.names.slice(),
+      board: board,
+      current: state.current,
+      scores: [state.scores[0], state.scores[1]],
+      round: state.round,
+      phase: state.phase,
+      roll: state.roll ? { tens: state.roll.tens, ones: state.roll.ones, value: state.roll.value, skipped: !!state.roll.skipped } : null,
+      roundWinner: state.roundWinner,
+      matchWinner: state.matchWinner,
+      placements: state.placements,
+      log: state.log.slice(),
+      rng: state.rng,
+    };
+  }
+
+  return {
+    MODE_GRID: MODE_GRID,
+    MODE_COLUMN: MODE_COLUMN,
+    BOARD_SIZES: BOARD_SIZES,
+    FLIP_VERTICAL: FLIP_VERTICAL,
+    formatNumber: formatNumber,
+    createGame: createGame,
+    roll: roll,
+    cellInterval: cellInterval,
+    isLegal: isLegal,
+    legalCells: legalCells,
+    cellStatus: cellStatus,
+    placeValue: placeValue,
+    place: place,
+    loseRound: loseRound,
+    endRound: endRound,
+    nextRound: nextRound,
+    feasibleCount: feasibleCount,
+    flexibility: flexibility,
+    serialize: serialize,
+    deserialize: deserialize,
+    cloneState: cloneState,
+  };
+}));

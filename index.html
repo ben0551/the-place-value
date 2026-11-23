@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3b2f6b">
+<title>The Place Value</title>
+<meta name="description" content="The Place Value — a two-player strategic number-placement game. Roll two dice, place the number, and do not get stuck.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">57</span>
+      <div class="brand-text">
+        <h1>The Place Value</h1>
+        <p class="tagline">Roll it. Place it. Do not get stuck.</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button id="btn-howto" type="button" class="btn ghost small">How to play</button>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ---------------------------------------------------------- home -->
+    <section id="screen-home" class="screen">
+      <div class="hero">
+        <div class="hero-dice" aria-hidden="true">
+          <span class="hero-die">4</span><span class="hero-die">7</span>
+          <span class="hero-arrow">&rarr;</span>
+          <span class="hero-number">47</span>
+        </div>
+        <p class="hero-copy">
+          Two dice. One shared grid. Every row and column must stay in order &mdash;
+          and if the number you roll has nowhere legal to go, you lose the round.
+        </p>
+        <div class="menu">
+          <button class="btn big" type="button" data-goto="setup" data-mode="ai">Play vs AI</button>
+          <button class="btn big" type="button" data-goto="setup" data-mode="local">Pass &amp; Play</button>
+          <button class="btn big" type="button" data-goto="online" data-mode="online">Online Multiplayer</button>
+        </div>
+        <p class="hero-hint">First to 3 round wins takes the match.</p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------- setup -->
+    <section id="screen-setup" class="screen" hidden>
+      <h2 id="setup-title">Game setup</h2>
+      <form id="setup-form" autocomplete="off">
+        <div class="field">
+          <span class="field-label">Players</span>
+          <div class="name-row">
+            <input id="name-1" type="text" maxlength="20" placeholder="Player 1" aria-label="Player 1 name">
+            <input id="name-2" type="text" maxlength="20" placeholder="Player 2" aria-label="Player 2 name">
+          </div>
+        </div>
+
+        <div class="field" id="field-difficulty">
+          <span class="field-label">AI difficulty</span>
+          <div class="pill-group" id="difficulty-group">
+            <label class="pill"><input type="radio" name="difficulty" value="easy"><span>Easy</span></label>
+            <label class="pill"><input type="radio" name="difficulty" value="medium" checked><span>Medium</span></label>
+            <label class="pill"><input type="radio" name="difficulty" value="hard"><span>Hard</span></label>
+          </div>
+          <p class="field-help" id="difficulty-help">Keeps its options open.</p>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Board size</span>
+          <div class="pill-group" id="size-group">
+            <label class="pill"><input type="radio" name="size" value="easy"><span>Easy 3&times;5</span></label>
+            <label class="pill"><input type="radio" name="size" value="standard" checked><span>Standard 4&times;5</span></label>
+            <label class="pill"><input type="radio" name="size" value="hard"><span>Hard 5&times;5</span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Ordering rules</span>
+          <div class="pill-group" id="mode-group">
+            <label class="pill"><input type="radio" name="mode" value="grid" checked><span>Whole grid</span></label>
+            <label class="pill"><input type="radio" name="mode" value="column"><span>Columns only</span>
+          </div>
+          <p class="field-help">Whole grid: rows and columns both increase. Columns only: each column just has to stay in one direction.</p>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Match length</span>
+          <div class="pill-group" id="target-group">
+            <label class="pill"><input type="radio" name="target" value="1"><span>First to 1</span></label>
+            <label class="pill"><input type="radio" name="target" value="2"><span>First to 2</span></label>
+            <label class="pill"><input type="radio" name="target" value="3" checked><span>First to 3</span></label>
+            <label class="pill"><input type="radio" name="target" value="5"><span>First to 5</span></label>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn ghost" data-goto="home">Back</button>
+          <button type="submit" class="btn primary">Start game</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ------------------------------------------------------- online -->
+    <section id="screen-online" class="screen" hidden>
+      <h2>Online multiplayer</h2>
+      <p class="screen-intro">One player hosts a game and shares the code. The other player opens the link or types the code.</p>
+
+      <div class="online-panels">
+        <div class="panel">
+          <h3>Host a game</h3>
+          <label class="stacked">Your name
+            <input id="host-name" type="text" maxlength="20" placeholder="Host">
+          </label>
+          <label class="stacked">Board size
+            <select id="host-size">
+              <option value="easy">Easy 3&times;5</option>
+              <option value="standard" selected>Standard 4&times;5</option>
+              <option value="hard">Hard 5&times;5</option>
+            </select>
+          </label>
+          <label class="stacked">Ordering rules
+            <select id="host-mode">
+              <option value="grid" selected>Whole grid</option>
+              <option value="column">Columns only</option>
+            </select>
+          </label>
+          <label class="stacked">Match length
+            <select id="host-target">
+              <option value="1">First to 1</option>
+              <option value="2">First to 2</option>
+              <option value="3" selected>First to 3</option>
+              <option value="5">First to 5</option>
+            </select>
+          </label>
+          <button id="btn-create" type="button" class="btn primary">Create game</button>
+        </div>
+
+        <div class="panel">
+          <h3>Join a game</h3>
+          <label class="stacked">Your name
+            <input id="join-name" type="text" maxlength="20" placeholder="Guest">
+          </label>
+          <label class="stacked">Game code
+            <input id="join-code" type="text" maxlength="12" placeholder="e.g. K7Q2">
+          </label>
+          <button id="btn-join" type="button" class="btn primary">Join game</button>
+        </div>
+      </div>
+
+      <div id="lobby" class="lobby" hidden>
+        <div class="panel">
+          <h3>Lobby</h3>
+          <p class="lobby-status" id="lobby-status">Waiting for your opponent&hellip;</p>
+          <div class="code-box">
+            <span class="code-label">Game code</span>
+            <span class="code-value" id="lobby-code">&mdash;</span>
+          </div>
+          <div class="code-box">
+            <span class="code-label">Invite link</span>
+            <input class="link-value" id="lobby-link" type="text" readonly value="">
+          </div>
+          <div class="form-actions">
+            <button id="btn-copy-link" type="button" class="btn small">Copy invite link</button>
+            <button id="btn-cancel-lobby" type="button" class="btn ghost small">Cancel game</button>
+          </div>
+          <p id="lobby-error" class="error-text" hidden></p>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn ghost" data-goto="home">Back</button>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------- game -->
+    <section id="screen-game" class="screen" hidden>
+      <div class="scorebar">
+        <div class="score-side" id="score-0">
+          <span class="score-name">Player 1</span>
+          <span class="score-pips" data-pips></span>
+        </div>
+        <div class="score-mid">
+          <span id="round-label">Round 1</span>
+          <span class="score-value" id="score-value">0 &ndash; 0</span>
+          <span class="score-target" id="score-target">First to 3</span>
+        </div>
+        <div class="score-side" id="score-1">
+          <span class="score-name">Player 2</span>
+          <span class="score-pips" data-pips></span>
+        </div>
+      </div>
+
+      <div id="turn-banner" class="turn-banner">Your turn</div>
+
+      <div class="board-wrap">
+        <div id="board" class="board" role="grid" aria-label="Game board"></div>
+      </div>
+
+      <div class="dice-row">
+        <div class="dice" id="dice">
+          <span class="die" id="die-tens">&minus;</span>
+          <span class="die" id="die-ones">&minus;</span>
+        </div>
+        <div class="dice-info">
+          <div class="last-roll" id="last-roll">No roll yet</div>
+          <div class="dice-help" id="dice-help">Roll the dice to begin.</div>
+        </div>
+        <button id="btn-roll" type="button" class="btn primary">Roll</button>
+      </div>
+
+      <div class="game-actions">
+        <button id="btn-rematch" type="button" class="btn ghost small" hidden>Rematch</button>
+        <button id="btn-quit" type="button" class="btn ghost small">Quit to menu</button>
+      </div>
+
+      <div class="log-panel">
+        <div class="log-head">Game log</div>
+        <div id="log" class="log" aria-live="polite"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <span>The Place Value &middot; a two-player number-placement game</span>
+    <span id="conn-status" class="conn-status"></span>
+  </footer>
+</div>
+
+<div id="overlay" class="overlay" hidden>
+  <div class="dialog" id="overlay-card" role="dialog" aria-modal="true"></div>
+</div>
+
+<script src="vendor/peerjs.min.js"></script>
+<script src="game.js"></script>
+<script src="ai.js"></script>
+<script src="online.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
